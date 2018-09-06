@@ -1,10 +1,10 @@
 library(readxl)
+library(RCurl)
+
 
 aims <- read.csv("~/Box Sync/cambodia_eba_gie/inputData/AIMS.csv")[,-1]
-# data <- read.csv("/Users/christianbaehr/Documents/GitHub/cambodia_eba_gie/inputData/gazetteer_data_trimmed.csv", 
-#                  stringsAsFactors = F)
-data <- read.csv("/Users/christianbaehr/Documents/GitHub/cambodia_eba_gie/inputData/gazetteer_data_trimmed.csv", 
-                 stringsAsFactors = F)
+province.data <- read.csv(text=getURL("https://raw.githubusercontent.com/itpir/cambodia_eba_gie/master/inputData/gazetteer_data_trimmed.csv"),
+                    stringsAsFactors = F)
 seila <- read.csv("~/Box Sync/cambodia_eba_gie/inputData/Seila.csv", stringsAsFactors = F)
 
 #no AIMS data for the Tboung Khmum province
