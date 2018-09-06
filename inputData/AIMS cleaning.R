@@ -41,6 +41,6 @@ names(missing_years) = missing_years_names
 completion_dummies = cbind.data.frame(completion_dummies, missing_years)
 completion_dummies = completion_dummies[,order(colnames(completion_dummies))]
 AIMS = cbind.data.frame(AIMS, completion_dummies)
-AIMS = AIMS %>% select(ID,`Project Title`, 43:93)
+AIMS = AIMS %>% select(`ID`,`Project Title`, `Total Budget`, 43:93)
 
 write.csv(AIMS, "/Users/christianbaehr/Box Sync/cambodia_eba_gie/inputData/AIMS.csv")
