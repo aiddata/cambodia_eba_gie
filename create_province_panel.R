@@ -1,9 +1,8 @@
 library(readxl)
 
-
-setwd("/Users/christianbaehr/Desktop/temp")
-
-aims <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/inputData/AIMS.csv")[,-1]
+aims <- read.csv("~/Box Sync/cambodia_eba_gie/inputData/AIMS.csv")[,-1]
+province.data <- as.data.frame(read_excel("~/Documents/GitHub/cambodia_eba_gie/inputData/gazetteer_data.xlsx")[,4:5])
+seila <- read.csv("~/Box Sync/cambodia_eba_gie/inputData/Seila.csv", stringsAsFactors = F)
 
 #no AIMS data for the Tboung Khmum province
 provinces <- names(aims)[4:28] <- c("Kampong Chhnang", "Kampong Thom", "Pursat", "Kampot", "Prey Veng", "Svay Rieng",
@@ -27,8 +26,8 @@ aims$secondhalf_years_provs <- rowSums(aims[as.character(2006:2018)])*rowSums(ai
 aims$avg_expend_firsthalf <- aims$Total.Budget/(aims$firsthalf_years_provs + (2*aims$secondhalf_years_provs))
 aims$avg_expend_secondhalf <- aims$avg_expend_firsthalf*2
 
+###################
 
-province.data <- as.data.frame(read_excel("/Users/christianbaehr/Desktop/gazetteer_data.xlsx")[,4:5])
 province.data[25,] <- c(0, "Nation Wide")
 province.data[17,2] <- "Siem Reap"
 province.data <- merge(as.data.frame(provinces, stringsAsFactors = F), province.data,
@@ -47,11 +46,13 @@ for(i in 1:nrow(province.data)) {
                                       as.vector(t(as.matrix(temp.data[as.character(2006:2018)])) %*% as.matrix(temp.data["avg_expend_secondhalf"])))
 }
 
+###################
 
-seila <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/inputData/Seila.csv")
+names(seila)[10:17] <- gsub("X.", "seila_%communes_", names(seila)[10:17])
+names(seila)[2:9] <- gsub("X", "seila_trt_", names(seila)[2:9])
+seila[1,"provinces"] <- "Siem Reap"
 
+province.data <- merge(province.data, seila, by="provinces", all = T)
 
-
-
-
+write.csv(province.data, "~/Box Sync/cambodia_eba_gie/processedData/eba_province_panel.csv")
 
