@@ -1,0 +1,127 @@
+
+library(sf)
+library(readxl)
+
+#reading gazetteer data in
+gazetteer.data <- as.data.frame(read_excel("~/GitHub/cambodia_eba_gie/inputData/National Gazetteer 2014.xlsx", 
+                                           sheet = 4))
+gazetteer.data$Id <- as.character(gazetteer.data$Id)
+gazetteer.data$Name_EN <- toupper(as.character(gazetteer.data$Name_EN))
+
+#some gazetteer village names include numbers at the end indicating whether that village is a duplicate. I omit these numbers
+#and later manually omit duplicates from the data
+no.nums <- as.character(1:10)
+for(i in 1:nrow(gazetteer.data)) {
+  if(any(strsplit(gazetteer.data$Name_EN[i], split = " ")[[1]] %in% no.nums)) {
+    temp <- strsplit(gazetteer.data$Name_EN[i], split = " ")[[1]]
+    gazetteer.data$Name_EN[i] <- paste(temp[1:(length(temp)-1)], collapse = " ")
+  }
+}
+
+###################
+
+#reading punwath data in
+punwath.data <- as.data.frame(st_read("~/Downloads/Cphum09-84-2016/Cphum09-84-2016.shp"))
+punwath.data$Code_Phum <- as.character(punwath.data$Code_Phum)
+punwath.data$Phum_Rom <- toupper(as.character(punwath.data$Phum_Rom))
+
+###################
+
+#reading shape data in
+shape.data <- as.data.frame(st_read("~/GitHub/cambodia_eba_gie/inputData/census_2008_villages/Village.shp"))
+shape.data$VILL_CODE <- as.character(shape.data$VILL_CODE)
+shape.data$VILL_NAME <- toupper(as.character(shape.data$VILL_NAME))
+#some village codes include an extra 0 at the front of the number. I omit this zero to prevent incorrect mismatches
+for(i in 1:nrow(shape.data)) {
+  temp.id <- strsplit(shape.data[i, "VILL_CODE"], split = "")[[1]]
+  if (temp.id[1]=="0") {
+    shape.data[i, "VILL_CODE"] <- paste0(temp.id[2:length(temp.id)], collapse = "")
+  }
+}
+
+###################
+
+#merging shape data and gazetteer data based on IDs
+gazetteer.shape.match1 <- merge(shape.data, gazetteer.data, by.x = "VILL_CODE", by.y = "Id")
+
+gazetteer.data.nomatch1 <- gazetteer.data[!(gazetteer.data$Id %in% shape.data$VILL_CODE),]
+shape.data.nomatch1 <- shape.data[!(shape.data$VILL_CODE %in% gazetteer.data$Id),]
+
+#merging Punwath data and gazetteer data based on IDs
+gazetteer.punwath.match1 <- merge(punwath.data, gazetteer.data.nomatch1, by.x = "Code_Phum", by.y = "Id")
+
+gazetteer.data.nomatch2 <- gazetteer.data.nomatch1[!(gazetteer.data.nomatch1$Id %in% punwath.data$Code_Phum),]
+punwath.data.nomatch1 <- punwath.data[!(punwath.data$Code_Phum %in% gazetteer.data.nomatch1$Id),]
+
+
+###################
+
+shape.data.duplicate <- shape.data.nomatch1$VILL_NAME[duplicated(shape.data.nomatch1$VILL_NAME)]
+shape.data.nomatch1$duplicate <- NULL
+for(i in 1:nrow(shape.data.nomatch1)) {
+  if(shape.data.nomatch1$VILL_NAME[i] %in% shape.data.duplicate) {
+    shape.data.nomatch1$duplicate[i] <- TRUE
+  } else {
+    shape.data.nomatch1$duplicate[i] <- FALSE
+  }
+}
+
+punwath.data.duplicate <- punwath.data.nomatch1$Phum_Rom[duplicated(punwath.data.nomatch1$Phum_Rom)]
+punwath.data.nomatch1$duplicate <- NULL
+for(i in 1:nrow(punwath.data.nomatch1)) {
+  if(punwath.data.nomatch1$Phum_Rom[i] %in% punwath.data.duplicate) {
+    punwath.data.nomatch1$duplicate[i] <- TRUE
+  } else {
+    punwath.data.nomatch1$duplicate[i] <- FALSE
+  }
+}
+
+gazetteer.data.duplicate <- gazetteer.data.nomatch2$Name_EN[duplicated(gazetteer.data.nomatch2$Name_EN)]
+gazetteer.data.nomatch2$duplicate <- NULL
+for(i in 1:nrow(gazetteer.data.nomatch2)) {
+  if(gazetteer.data.nomatch2$Name_EN[i] %in% gazetteer.data.duplicate) {
+    gazetteer.data.nomatch2$duplicate[i] <- TRUE
+  } else {
+    gazetteer.data.nomatch2$duplicate[i] <- FALSE
+  }
+}
+
+shape.data.nomatch1.noduplicates <- shape.data.nomatch1[!shape.data.nomatch1$duplicate,]
+punwath.data.nomatch1.noduplicates <- punwath.data.nomatch1[!punwath.data.nomatch1$duplicate,]
+gazetteer.data.nomatch2.noduplicates <- gazetteer.data.nomatch2[!gazetteer.data.nomatch2$duplicate,]
+
+# sum(shape.data.nomatch1.noduplicates$VILL_NAME %in% gazetteer.data.nomatch2.noduplicates$Name_EN)
+# sum(punwath.data.nomatch1.noduplicates$Phum_Rom %in% gazetteer.data.nomatch2.noduplicates$Name_EN)
+
+gazetteer.punwath.match2 <- merge(punwath.data.nomatch1.noduplicates, gazetteer.data.nomatch2.noduplicates,
+                                  by.x = "Phum_Rom", by.y = "Name_EN")
+gazetteer.data.nomatch3 <- gazetteer.data.nomatch2.noduplicates[!(gazetteer.data.nomatch2.noduplicates$Name_EN %in% 
+                                                                    punwath.data.nomatch1.noduplicates$Phum_Rom),]
+punwath.data.nomatch2 <- punwath.data.nomatch1.noduplicates[!(punwath.data.nomatch1.noduplicates$Phum_Rom %in% 
+                                                                gazetteer.data.nomatch3$Name_EN),]
+
+
+
+
+
+
+gazetteer.shape.match2 <- merge(shape.data.nomatch1.noduplicates, gazetteer.data.nomatch3,
+                                by.x = "VILL_NAME", by.y = "Name_EN")
+
+gazetteer.data.nomatch4 <- gazetteer.data.nomatch3[!(gazetteer.data.nomatch3$Name_EN %in% 
+                                                       shape.data.nomatch1.noduplicates$VILL_NAME),] 
+
+shape.data.nomatch2 <- shape.data.nomatch1.noduplicates[!(shape.data.nomatch1.noduplicates$VILL_NAME %in% 
+                                                            gazetteer.data.nomatch4),]
+
+
+
+
+
+
+
+
+
+
+
+
