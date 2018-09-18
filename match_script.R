@@ -93,35 +93,44 @@ gazetteer.data.nomatch2.noduplicates <- gazetteer.data.nomatch2[!gazetteer.data.
 # sum(shape.data.nomatch1.noduplicates$VILL_NAME %in% gazetteer.data.nomatch2.noduplicates$Name_EN)
 # sum(punwath.data.nomatch1.noduplicates$Phum_Rom %in% gazetteer.data.nomatch2.noduplicates$Name_EN)
 
-gazetteer.punwath.match2 <- merge(punwath.data.nomatch1.noduplicates, gazetteer.data.nomatch2.noduplicates,
-                                  by.x = "Phum_Rom", by.y = "Name_EN")
+gazetteer.shape.match2 <- merge(shape.data.nomatch1.noduplicates, gazetteer.data.nomatch2,
+                                by.x = "VILL_NAME", by.y = "Name_EN")
 gazetteer.data.nomatch3 <- gazetteer.data.nomatch2.noduplicates[!(gazetteer.data.nomatch2.noduplicates$Name_EN %in% 
+                                                       shape.data.nomatch1.noduplicates$VILL_NAME),] 
+shape.data.nomatch2 <- shape.data.nomatch1.noduplicates[!(shape.data.nomatch1.noduplicates$VILL_NAME %in% 
+                                                            gazetteer.data.nomatch3),]
+
+gazetteer.punwath.match2 <- merge(punwath.data.nomatch1.noduplicates, gazetteer.data.nomatch3,
+                                  by.x = "Phum_Rom", by.y = "Name_EN")
+gazetteer.data.nomatch4 <- gazetteer.data.nomatch3[!(gazetteer.data.nomatch3$Name_EN %in% 
                                                                     punwath.data.nomatch1.noduplicates$Phum_Rom),]
 punwath.data.nomatch2 <- punwath.data.nomatch1.noduplicates[!(punwath.data.nomatch1.noduplicates$Phum_Rom %in% 
-                                                                gazetteer.data.nomatch3$Name_EN),]
+                                                                gazetteer.data.nomatch4$Name_EN),]
+
+
+library(plyr)
+gazetteer.punwath.fullmatch <- rbind.fill(gazetteer.punwath.match1, gazetteer.punwath.match2)
+gazetteer.shape.fullmatch <- rbind.fill(gazetteer.shape.match1, gazetteer.shape.match2)
+
+
+gazetteer.shape <- gazetteer.shape.fullmatch[,c("VILL_CODE", "Id", "Name_EN", "geometry", "TOTPOP")]
+gazetteer.shape$Id[is.na(gazetteer.shape$Id)] <- gazetteer.shape$VILL_CODE[is.na(gazetteer.shape$Id)]
+gazetteer.shape <- gazetteer.shape[,c("Id", "Name_EN", "geometry", "TOTPOP")]
+
+names(gazetteer.shape) <- c("village_id", "village_name", "coordinates", "total_population")
+
+gazetteer.punwath <- gazetteer.punwath.fullmatch[,c("Code_Phum", "Id", "Name_EN", "geometry")]
+gazetteer.punwath$Id[is.na(gazetteer.punwath$Id)] <- gazetteer.punwath$Code_Phum[is.na(gazetteer.punwath$Id)]
+gazetteer.punwath <- gazetteer.punwath[,c("Id", "Name_EN", "geometry")]
 
 
 
+write.csv(gazetteer.shape, "/Users/christianbaehr/Box Sync/cambodia_eba_gie/inputData/village_shape_data.csv", row.names = F)
 
 
 
-gazetteer.shape.match2 <- merge(shape.data.nomatch1.noduplicates, gazetteer.data.nomatch3,
-                                by.x = "VILL_NAME", by.y = "Name_EN")
-
-gazetteer.data.nomatch4 <- gazetteer.data.nomatch3[!(gazetteer.data.nomatch3$Name_EN %in% 
-                                                       shape.data.nomatch1.noduplicates$VILL_NAME),] 
-
-shape.data.nomatch2 <- shape.data.nomatch1.noduplicates[!(shape.data.nomatch1.noduplicates$VILL_NAME %in% 
-                                                            gazetteer.data.nomatch4),]
-
-
-
-
-
-
-
-
-
+pre_extract.data <- SpatialPointsDataFrame(coords = gazetteer.shape$coordinates, data = gazetteer.shape,
+                                           proj4string=CRS("+proj=longlat +datum=WGS84"))
 
 
 
