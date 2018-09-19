@@ -1,6 +1,7 @@
 
 library(sf)
 library(readxl)
+library(plyr)
 
 #reading gazetteer data in
 gazetteer.data <- as.data.frame(read_excel("~/GitHub/cambodia_eba_gie/inputData/National Gazetteer 2014.xlsx", 
@@ -56,6 +57,7 @@ punwath.data.nomatch1 <- punwath.data[!(punwath.data$Code_Phum %in% gazetteer.da
 
 ###################
 
+#removing observations from shape data if their names have duplicates in the data
 shape.data.duplicate <- shape.data.nomatch1$VILL_NAME[duplicated(shape.data.nomatch1$VILL_NAME)]
 shape.data.nomatch1$duplicate <- NULL
 for(i in 1:nrow(shape.data.nomatch1)) {
@@ -66,6 +68,7 @@ for(i in 1:nrow(shape.data.nomatch1)) {
   }
 }
 
+#removing observations from punwath data if their names have duplicates in the data
 punwath.data.duplicate <- punwath.data.nomatch1$Phum_Rom[duplicated(punwath.data.nomatch1$Phum_Rom)]
 punwath.data.nomatch1$duplicate <- NULL
 for(i in 1:nrow(punwath.data.nomatch1)) {
@@ -76,6 +79,7 @@ for(i in 1:nrow(punwath.data.nomatch1)) {
   }
 }
 
+#removing observations from the gazetteer data if their names have duplicates in the data
 gazetteer.data.duplicate <- gazetteer.data.nomatch2$Name_EN[duplicated(gazetteer.data.nomatch2$Name_EN)]
 gazetteer.data.nomatch2$duplicate <- NULL
 for(i in 1:nrow(gazetteer.data.nomatch2)) {
@@ -90,16 +94,16 @@ shape.data.nomatch1.noduplicates <- shape.data.nomatch1[!shape.data.nomatch1$dup
 punwath.data.nomatch1.noduplicates <- punwath.data.nomatch1[!punwath.data.nomatch1$duplicate,]
 gazetteer.data.nomatch2.noduplicates <- gazetteer.data.nomatch2[!gazetteer.data.nomatch2$duplicate,]
 
-# sum(shape.data.nomatch1.noduplicates$VILL_NAME %in% gazetteer.data.nomatch2.noduplicates$Name_EN)
-# sum(punwath.data.nomatch1.noduplicates$Phum_Rom %in% gazetteer.data.nomatch2.noduplicates$Name_EN)
-
+#from the gazetteer and shape data that hasnt already been merged, merging the gazetteer data with the shape data
+#that doesnt have duplicated names, based on names
 gazetteer.shape.match2 <- merge(shape.data.nomatch1.noduplicates, gazetteer.data.nomatch2,
                                 by.x = "VILL_NAME", by.y = "Name_EN")
 gazetteer.data.nomatch3 <- gazetteer.data.nomatch2.noduplicates[!(gazetteer.data.nomatch2.noduplicates$Name_EN %in% 
                                                        shape.data.nomatch1.noduplicates$VILL_NAME),] 
 shape.data.nomatch2 <- shape.data.nomatch1.noduplicates[!(shape.data.nomatch1.noduplicates$VILL_NAME %in% 
                                                             gazetteer.data.nomatch3),]
-
+#from the gazetteer and punwath data that hasnt already been merged, merging the gazetteer data with the punwath data
+#that doesnt have duplicated names, based on names
 gazetteer.punwath.match2 <- merge(punwath.data.nomatch1.noduplicates, gazetteer.data.nomatch3,
                                   by.x = "Phum_Rom", by.y = "Name_EN")
 gazetteer.data.nomatch4 <- gazetteer.data.nomatch3[!(gazetteer.data.nomatch3$Name_EN %in% 
@@ -107,30 +111,39 @@ gazetteer.data.nomatch4 <- gazetteer.data.nomatch3[!(gazetteer.data.nomatch3$Nam
 punwath.data.nomatch2 <- punwath.data.nomatch1.noduplicates[!(punwath.data.nomatch1.noduplicates$Phum_Rom %in% 
                                                                 gazetteer.data.nomatch4$Name_EN),]
 
-
-library(plyr)
+#combining the data frames containing matches between the Punwath data and the gazetteer data
 gazetteer.punwath.fullmatch <- rbind.fill(gazetteer.punwath.match1, gazetteer.punwath.match2)
+gazetteer.punwath.fullmatch$Name_EN[is.na(gazetteer.punwath.fullmatch$Name_EN)] <- 
+  gazetteer.punwath.fullmatch$Phum_Rom[is.na(gazetteer.punwath.fullmatch$Name_EN)]
+gazetteer.punwath.fullmatch$Id[is.na(gazetteer.punwath.fullmatch$Id)] <- 
+  gazetteer.punwath.fullmatch$Code_Phum[is.na(gazetteer.punwath.fullmatch$Id)]
+
+#combining the data frames containing matches between the shape data and the gazetteer data
 gazetteer.shape.fullmatch <- rbind.fill(gazetteer.shape.match1, gazetteer.shape.match2)
+gazetteer.shape.fullmatch$Name_EN[is.na(gazetteer.shape.fullmatch$Name_EN)] <- 
+  gazetteer.shape.fullmatch$VILL_NAME[is.na(gazetteer.shape.fullmatch$Name_EN)]
+gazetteer.shape.fullmatch$Id[is.na(gazetteer.shape.fullmatch$Id)] <- 
+  gazetteer.shape.fullmatch$VILL_CODE[is.na(gazetteer.shape.fullmatch$Id)]
+
+#retaining only necessary columns for the matched datasets and aligning column names
+gazetteer.shape <- gazetteer.shape.fullmatch[,c("Id", "ProvEn", "Name_EN", "geometry")]
+names(gazetteer.shape) <- c("vill_code", "province_name", "vill_name", "geometry")
+gazetteer.punwath <- gazetteer.punwath.fullmatch[,c("Id", "ProvEn", "Name_EN", "geometry")]
+names(gazetteer.punwath) <- c("vill_code", "province_name", "vill_name", "geometry")
+
+#binding matched shape/gazetteer data with matched punwath/gazetteer data
+full.data <- rbind(gazetteer.shape, gazetteer.punwath)
+
+aims <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/eba_province_panel.csv", stringsAsFactors = F)[,-1]
+aims$provinces[aims$provinces=="Siem Reap"] <- "Siemreap"
+
+panel <- merge(aims, full.data, by.x = "provinces", by.y = "province_name")
 
 
-gazetteer.shape <- gazetteer.shape.fullmatch[,c("VILL_CODE", "Id", "Name_EN", "geometry", "TOTPOP")]
-gazetteer.shape$Id[is.na(gazetteer.shape$Id)] <- gazetteer.shape$VILL_CODE[is.na(gazetteer.shape$Id)]
-gazetteer.shape <- gazetteer.shape[,c("Id", "Name_EN", "geometry", "TOTPOP")]
-
-names(gazetteer.shape) <- c("village_id", "village_name", "coordinates", "total_population")
-
-gazetteer.punwath <- gazetteer.punwath.fullmatch[,c("Code_Phum", "Id", "Name_EN", "geometry")]
-gazetteer.punwath$Id[is.na(gazetteer.punwath$Id)] <- gazetteer.punwath$Code_Phum[is.na(gazetteer.punwath$Id)]
-gazetteer.punwath <- gazetteer.punwath[,c("Id", "Name_EN", "geometry")]
 
 
 
-write.csv(gazetteer.shape, "/Users/christianbaehr/Box Sync/cambodia_eba_gie/inputData/village_shape_data.csv", row.names = F)
 
-
-
-pre_extract.data <- SpatialPointsDataFrame(coords = gazetteer.shape$coordinates, data = gazetteer.shape,
-                                           proj4string=CRS("+proj=longlat +datum=WGS84"))
 
 
 
