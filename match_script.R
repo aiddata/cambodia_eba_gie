@@ -126,19 +126,18 @@ gazetteer.shape.fullmatch$Id[is.na(gazetteer.shape.fullmatch$Id)] <-
   gazetteer.shape.fullmatch$VILL_CODE[is.na(gazetteer.shape.fullmatch$Id)]
 
 #retaining only necessary columns for the matched datasets and aligning column names
-gazetteer.shape <- gazetteer.shape.fullmatch[,c("Id", "ProvEn", "Name_EN", "geometry")]
-names(gazetteer.shape) <- c("vill_code", "province_name", "vill_name", "geometry")
+gazetteer.shape <- gazetteer.shape.fullmatch[,c("Id", "ProvEn", "Name_EN", "geometry", "TOTPOP")]
+names(gazetteer.shape) <- c("vill_code", "province_name", "vill_name", "geometry", "total_pop")
 gazetteer.punwath <- gazetteer.punwath.fullmatch[,c("Id", "ProvEn", "Name_EN", "geometry")]
 names(gazetteer.punwath) <- c("vill_code", "province_name", "vill_name", "geometry")
 
 #binding matched shape/gazetteer data with matched punwath/gazetteer data
-full.data <- rbind(gazetteer.shape, gazetteer.punwath)
+full.data <- rbind.fill(gazetteer.shape, gazetteer.punwath)
 
 aims <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/eba_province_panel.csv", stringsAsFactors = F)[,-1]
 aims$provinces[aims$provinces=="Siem Reap"] <- "Siemreap"
 
 panel <- merge(aims, full.data, by.x = "provinces", by.y = "province_name")
-
 
 
 

@@ -4,8 +4,7 @@ library(RCurl)
 #pull in AIMS data
 aims <- read.csv("~/Box Sync/cambodia_eba_gie/inputData/AIMS.csv")[,-1]
 #pull in Gazetteer data with province names and IDs
-province.data <- read.csv(text=getURL("https://raw.githubusercontent.com/itpir/cambodia_eba_gie/master/inputData/gazetteer_data_trimmed.csv"),
-                    stringsAsFactors = F)
+province.data <- read_xlsx("/Users/christianbaehr/GitHub/cambodia_eba_gie/inputData/National Gazetteer 2014.xlsx")[4:5]
 #pull in Seila data
 seila <- read.csv("~/Box Sync/cambodia_eba_gie/inputData/Seila.csv", stringsAsFactors = F)
 
