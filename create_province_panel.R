@@ -54,7 +54,7 @@ province.data <- merge(as.data.frame(provinces, stringsAsFactors = F), province.
 
 #generating new columns for total number of projects taking place in each province in each year and also for total dollar
 #amount going into each province each year from these projects
-new.variables <- paste0(rep(c("count","sum"), each=length(years)), years)
+new.variables <- paste0(rep(c("aims.count","aims.sum"), each=length(years)), years)
 #combining the existing province data frame with these new columns
 province.data <- cbind(province.data, as.data.frame(matrix(NA, nrow = nrow(province.data), 
                                                         ncol = length(new.variables),
@@ -82,5 +82,6 @@ seila[1,"provinces"] <- "Siem Reap"
 province.data <- merge(province.data, seila, by="provinces", all = T)
 
 #exporting the province level panel dataset containing both the AIMS and Seila data into Box Sync
-write.csv(province.data, "~/Box Sync/cambodia_eba_gie/processedData/eba_province_panel.csv")
+write.csv(province.data, "~/Box Sync/cambodia_eba_gie/processedData/eba_province_panel.csv",
+          row.names = F)
 
