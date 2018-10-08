@@ -3,6 +3,7 @@
 #only 2009-2012
 
 library(readxl)
+library(stringr)
 contract.output <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2012/ContractOutput.xlsx")
 contract.budget <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2012/ContractBudget.xlsx")
 list.fund.source <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2012/ListFundSource.xlsx")
@@ -96,64 +97,32 @@ contract <- contract[!(contract$matchID %in% contract$matchID[duplicated(contrac
 project <- merge(project, contract, by.x="matchID", by.y="matchID")
 length(unique(project$matchID))
 
+project$plannedstartyear <- matrix(unlist(str_split(as.character(project$PlannedStartOn), "-")), ncol = 3, byrow = T)[,1]
+project$plannedstartmonth <- matrix(unlist(str_split(as.character(project$PlannedStartOn), "-")), ncol = 3, byrow = T)[,2]
+project$actualstartyear[!is.na(project$ActualWorkStartOn)] <- 
+  matrix(unlist(str_split(as.character(project$ActualWorkStartOn[!is.na(project$ActualWorkStartOn)]), "-")), ncol = 3, byrow = T)[,1]
+project$actualstartmonth[!is.na(project$ActualWorkStartOn)] <- 
+  matrix(unlist(str_split(as.character(project$ActualWorkStartOn[!is.na(project$ActualWorkStartOn)]), "-")), ncol = 3, byrow = T)[,2]
 
+project$plannedendyear <- matrix(unlist(str_split(as.character(project$PlannedCompletionOn), "-")), ncol = 3, byrow = T)[,1]
+project$plannedendmonth <- matrix(unlist(str_split(as.character(project$PlannedCompletionOn), "-")), ncol = 3, byrow = T)[,2]
+project$actualendyear[!is.na(project$ActualWorkCompletionOn)] <- 
+  matrix(unlist(str_split(as.character(project$ActualWorkCompletionOn[!is.na(project$ActualWorkCompletionOn)]), "-")), ncol = 3, byrow = T)[,1]
+project$actualendmonth[!is.na(project$ActualWorkCompletionOn)] <- 
+  matrix(unlist(str_split(as.character(project$ActualWorkCompletionOn[!is.na(project$ActualWorkCompletionOn)]), "-")), ncol = 3, byrow = T)[,2]
 
+names(project)[151] <- "Name_EN.y.y.2"
+project <- project[,c("Id.x", "Id.y", "RILGPProjectTypeId", "Name_EN.y.y.2", "RILGPOutputCategoryId",
+                      "Name_EN.y.y", "SubSectorId.x", "List_Project_Output_Type_ID", "Name_EN.y.x",
+                      "plannedstartyear", "plannedstartmonth", "actualstartyear", "actualstartmonth",
+                      "plannedendyear", "plannedendmonth", "actualendyear", "actualendmonth", "last.report",
+                      "progress", "Bidders", "AwardedByBidding", "cs.fund", "local.cont", "VillageId.x")]
 
+names(project) <- c("project_id", "contract_id", "activity.type.num", "activity.type", "activity.desc.num",
+                    "activity.desc", "subsector", "new.repair.num", "new.repair", "planned.start.yr",
+                    "planned.start.mo", "actual.start.yr", "actual.start.mo", "planned.end.yr", "planned.end.mo",
+                    "actual.end.yr", "actual.end.mo", "last.report", "status", "n.bidders", "bid.dummy", "cs.fund",
+                    "local.cont", "vill.id")
 
-
-
-temp.project <- temp.project[,c("Id", "AreaCode", "NatureOfProject", "SubSectorId", "Name_EN.x", "List_Project_Output_Type_ID", "Id.y", "OrderNr.x", "Qty", "UnitCost", "CREF", "GEOREF", )]
-
-
-
-
-#unique(contract$AwardedByBidding) #unique values are -1 and 0. Which indicates competitive bidding?
-#sum(contract.output$ContractId %in% contract$Id) #full match between contract.output and contract
-
-contract.match <- merge(contract.output, contract, by.x="ContractId", by.y="Id")
-
-project <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2012/Project.xlsx")
-project.output <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2012/ProjectOutput.xlsx")
-sum(project.output$ProjectId %in% project$Id)
-project.match <- merge(project.output, project, by.x="ProjectId", by.y="Id")
-
-# dups <- project.output[project.output$ProjectId=="{1D82DAB8-D1F6-40A5-B7FD-9F7500ACDFB7}",]
-# dups <- project.output[project.output$ProjectId=="{00062FDF-0957-4480-AA75-9DD400BF130E}",]
-# 
-# dups2 <- contract.match[contract.match$Reference=="{1D82DAB8-D1F6-40A5-B7FD-9F7500ACDFB7}",]
-# dups2 <- contract.match[contract.match$Reference=="{00062FDF-0957-4480-AA75-9DD400BF130E}",]
-
-
-sum(contract.match$Reference %in% project.match$ProjectId)
-
-project.match$matchID <- paste0(project.match$ProjectId, project.match$VillageId, project.match$OrderNr)
-contract.match$matchID <- paste0(contract.match$Reference, contract.match$VillageId, contract.match$OrderNr)
-
-project.match$uniqueprojID <- seq(1, nrow(project.match), 1)
-contract.match$uniquecontID <- seq((nrow(project.match)+1), (nrow(project.match)+nrow(contract.match)), 1)
-
-proj.cont.match <- merge(project.match, contract.match, by.x="matchID", by.y="matchID")
-
-project.nomatch <- project.match[which(!(project.match$uniqueprojID %in% proj.cont.match$uniqueprojID)),]
-contract.nomatch <- contract.match[which(!(contract.match$uniquecontID %in% proj.cont.match$uniquecontID)),]
-write.csv(project.nomatch, "~/Desktop/project_nomatch.csv")
-write.csv(contract.nomatch, "~/Desktop/contract_nomatch.csv")
-
-
-length(unique(proj.cont.match$VillageId.x))
-sum(proj.cont.match$VillageId.x %in% panel$vill_code)
-sum(panel$vill_code %in% proj.cont.match$VillageId.x)
-
-
-# 2003-2008 data
-
-village <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/Village.xlsx")
-project.output <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/ProjectOutput.xlsx")
-
-sum(village$VillGis %in% panel$vill_code)
-sum(panel$vill_code %in% project.output$VillGis)
-
-temp <- strsp(contract.match$ActualWorkCompletionOn, )
-
-
+write.csv(project, "~/Box Sync/cambodia_eba_gie/PID/completed_pid/pid_2012.csv", row.names = F)
 
