@@ -1,5 +1,6 @@
 
 library(readxl)
+library(stringr)
 
 contract <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/Contract.xlsx")
 length(unique(contract$ContractID))
@@ -55,11 +56,10 @@ project <- merge(project, proj.type, by.x="ProjTypeID", by.y="ProjTypeID")
 rm(list=setdiff(ls(), c("contract", "project", "project.output")))
 
 project <- merge(project, project.output, by.x="ProjectID", by.y="ProjectID")
-
-which(duplicated(paste(project$VillGis, project$ProjectID)))[1]
+x <- unlist(lapply(project, class))
+project[,x[!(x=="POSIXt")]=="POSIXct"] <- lapply(project[,x[!(x=="POSIXt")]=="POSIXct"], as.character)
 
 proj.cont <- cbind(project[0,], contract[0,])
-proj.cont[] <- lapply(proj.cont, function(x) as.numeric(as.character(x)))
 proj.cont <- proj.cont[,!(names(proj.cont)=="linkProjectID")]
 
 for(i in unique(contract$linkProjectID)) {
@@ -73,43 +73,30 @@ for(i in unique(contract$linkProjectID)) {
                                                                                              temp.contract$FundLocalContr/nrow(temp.project),
                                                                                              temp.contract$linkProjectID), ncol = 3))
     
-    # cs.split <- as.data.frame(matrix(c(temp.contract$FundCS/nrow(temp.project),
-    #                                    temp.contract$FundLocalContr/nrow(temp.project),
-    #                                    temp.contract$linkProjectID), ncol = 3))
-    # names(cs.split) <- c("FundCS", "FundLocalContr", "linkProjectID")
-    
     temp.project <- merge(temp.project, temp.contract, by.x="ProjectID", by.y="linkProjectID")
-    
-    # test <- merge(temp.project, temp.contract, by.x=)
-    # 
-    # 
-    # 
-    # temp.contract <- temp.contract[,!(names(temp.contract) %in% names(temp.project2))]
-    # temp.project3 <- merge(temp.project, temp.contract, by.x="ProjectID", by.y="linkProjectID")
-    # 
-    # temp.project4 <- cbind(temp.project2, temp.project3[,!(names(temp.project3) %in% names(temp.project))])
     proj.cont[(nrow(proj.cont)+1):(nrow(proj.cont)+nrow(temp.project)),] <- temp.project
   }
 }
 
-proj.cont <- proj.cont[,c("ProjectID", "ContractID", "NameE.y.x", "Name",
-                          "isNew", "NameE.y.y", )] #no subsector,
-names(proj.cont) <- c("project_id", "contract_id", "activity.type", "activity.desc",
-                      "new.repair.num", "new.repair",)
+proj.cont$plannedstartyear <- matrix(unlist(str_split(as.character(proj.cont$StartDate), "-")), ncol = 3, byrow = T)[,1]
+proj.cont$plannedstartmonth <- matrix(unlist(str_split(as.character(proj.cont$StartDate), "-")), ncol = 3, byrow = T)[,2]
 
-write.csv(proj.cont, "~/Box Sync/")
+proj.cont$plannedendyear <- matrix(unlist(str_split(as.character(proj.cont$EndDate), "-")), ncol = 3, byrow = T)[,1]
+proj.cont$plannedendmonth <- matrix(unlist(str_split(as.character(proj.cont$EndDate), "-")), ncol = 3, byrow = T)[,2]
+proj.cont$actualendyear[!is.na(proj.cont$CompletionDate)] <- 
+  matrix(unlist(str_split(as.character(proj.cont$CompletionDate[!is.na(proj.cont$CompletionDate)]), "-")), ncol = 3, byrow = T)[,1]
+proj.cont$actualendmonth[!is.na(proj.cont$CompletionDate)] <- 
+  matrix(unlist(str_split(as.character(proj.cont$CompletionDate[!is.na(proj.cont$CompletionDate)]), "-")), ncol = 3, byrow = T)[,2]
 
-project <- project[,c("Id.x", "Id.y", "RILGPProjectTypeId", "Name_EN.y.y.2", "RILGPOutputCategoryId",
-                      "Name_EN.y.y", "SubSectorId.x", "List_Project_Output_Type_ID", "Name_EN.y.x",
-                      "plannedstartyear", "plannedstartmonth", "actualstartyear", "actualstartmonth",
-                      "plannedendyear", "plannedendmonth", "actualendyear", "actualendmonth", "last.report",
-                      "progress", "Bidders", "AwardedByBidding", "cs.fund", "local.cont", "VillageId.x")]
-#assigning meaningful names to the variables in the data
-names(project) <- c("project_id", "contract_id", "activity.type.num", "activity.type", "activity.desc.num",
-                    "activity.desc", "subsector", "new.repair.num", "new.repair", "planned.start.yr",
-                    "planned.start.mo", "actual.start.yr", "actual.start.mo", "planned.end.yr", "planned.end.mo",
-                    "actual.end.yr", "actual.end.mo", "last.report", "status", "n.bidders", "bid.dummy", "cs.fund",
-                    "local.cont", "vill.id")
+proj.cont <- proj.cont[,c("ProjectID", "ContractID", "ProjTypeID", "NameE.y.x", "OutputID", "Name",
+                          "isNew", "NameE.y.y", "plannedstartyear", "plannedstartmonth",
+                          "plannedendyear", "plannedendmonth", "actualendyear", "actualendmonth",
+                          "last.report", "progress", "Bidders", "FundCS", "FundLocalContr", "VillGis")] #no subsector, need competitive bidding dummy
+names(proj.cont) <- c("project_id", "contract_id", "activity.type.num", "activity.type", "activity.desc.num", 
+                      "activity.desc", "new.repair.num", "new.repair", "planned.start.yr", "planned.start.mo",
+                      "planned.end.yr", "planned.end.mo", "actual.end.year", "actual.end.month", "last.report",
+                      "status", "n.bidders", "cs.fund", "local.cont", "vill.id")
 
-write.csv(project, "~/Box Sync/cambodia_eba_gie/PID/completed_pid/pid_2012.csv", row.names = F)
+write.csv(proj.cont, "~/Box Sync/cambodia_eba_gie/PID/completed_pid/pid_2008.csv", row.names = F)
+
 
