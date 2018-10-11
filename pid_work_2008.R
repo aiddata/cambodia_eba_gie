@@ -94,7 +94,7 @@ proj.cont <- proj.cont[,c("ProjectID", "ContractID", "ProjTypeID", "NameE.y.x", 
                           "last.report", "progress", "Bidders", "FundCS", "FundLocalContr", "VillGis")] #no subsector, need competitive bidding dummy
 names(proj.cont) <- c("project_id", "contract_id", "activity.type.num", "activity.type", "activity.desc.num", 
                       "activity.desc", "new.repair.num", "new.repair", "planned.start.yr", "planned.start.mo",
-                      "planned.end.yr", "planned.end.mo", "actual.end.year", "actual.end.month", "last.report",
+                      "planned.end.yr", "planned.end.mo", "actual.end.yr", "actual.end.mo", "last.report",
                       "status", "n.bidders", "cs.fund", "local.cont", "vill.id")
 
 write.csv(proj.cont, "~/Box Sync/cambodia_eba_gie/PID/completed_pid/pid_2008.csv", row.names = F)
