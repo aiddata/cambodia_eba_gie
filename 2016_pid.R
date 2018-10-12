@@ -1,24 +1,19 @@
 
 library(XML)
 library(dplyr)
-#library(rlist)
+library(stringr)
 
 # data <- list()
-# 
 # for(i in 1:25) {
 #   for(j in 2013:2016) {
 #       url <- paste0("http://db.ncdd.gov.kh/pid/reports/monitoring/contractsummary.castle?pv=", i, "&year=", j)
-#       
 #       x <- readHTMLTable(url)
-#       
 #       y <- x[[2]]
 #       data[[paste0(j, i)]] <- y[-1,]
 #   }
 # }
 
 load("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2016/pid_2016_r_list.RData")
-
-
 data=x[-92]
 
 for(i in 1:99) {
@@ -38,21 +33,12 @@ for(i in 1:99) {
   communes <- new.data$Commune[which(new.data$Commune != "")]
   comm.rows <- c(which(new.data$Commune != ""), nrow(new.data))
   
-  # for(k in 1:(length(comm.rows)-1)) {
-  #   new.data$comm2[comm.rows[k]:comm.rows[k+1]] <- communes[k] 
-  # }
-  
-  
-  #######
-  
   new.data$village.id <- NA
   villages <- new.data$Village[which(new.data$Commune != "")]
   new.data$activity <- NA
   activities <- new.data$Outputs[which(new.data$Commune != "")]
-  
   new.data$cs.fund <- NA
   cs.fund <- new.data$`C/S Fund`[which(new.data$Commune != "")]
-  
   new.data$local.cont <- NA
   local.cont <- new.data$`Local Contrib.`[which(new.data$Commune != "")]
   
@@ -63,76 +49,95 @@ for(i in 1:99) {
     
     y <- length(comm.rows[k]:comm.rows[k+1])-2
     
-    #####
-    
     cs.fund2 <- unlist(strsplit(cs.fund[k]," "))[1]
     cs.fund2 <- gsub(",", "", cs.fund2)
     local.cont2 <- unlist(strsplit(local.cont[k]," "))[1]
     local.cont2 <- gsub(",", "", local.cont2)
     
     if(k+1==length(comm.rows)) {
-      
       cs.fund2 <- as.numeric(cs.fund2)/(y+1)
       local.cont2 <- as.numeric(local.cont2)/(y+1)
-      
     } else {
-      
       cs.fund2 <- as.numeric(cs.fund2)/y
       local.cont2 <- as.numeric(local.cont2)/y
-      
     }
-     
-    #####
-    
-    # cs.fund2 <- unlist(strsplit(cs.fund[k]," "))[1]
-    # cs.fund2 <- gsub(",", "", cs.fund2)
-    # local.cont2 <- unlist(strsplit(local.cont[k]," "))[1]
-    # local.cont2 <- gsub(",", "", local.cont2)
-    
-    # cs.fund2 <- as.numeric(cs.fund2)/y
-    # local.cont2 <- as.numeric(local.cont2)/y
     
     new.data$cs.fund[comm.rows[k]:comm.rows[k+1]] <- cs.fund2
     new.data$local.cont[comm.rows[k]:comm.rows[k+1]] <- local.cont2
     
-    #####
-    
-    # if(k+1==length(comm.rows)) {
-    #   
-    #   cs.fund2 <- as.numeric(cs.fund2)/(y+1)
-    #   local.cont2 <- as.numeric(local.cont2)/(y+1)
-    #   
-    # }
-    
-    #####
-    
   }
-
   new.data <- new.data[-comm.rows[-length(comm.rows)],]
-  
-  #######
   new.data <- new.data[,-1]
   names(new.data)[names(new.data)=="comm2"] <- "commune"
   
+  new.data$isNew <- NA
+  for(m in 1:nrow(new.data)) {
+    new.data$isNew[m] <- unlist(strsplit(new.data$Outputs[m], "]"))[1]
+  }
+  new.data$isNew <- gsub(" ", "", new.data$isNew)
+  new.data$isNew <- gsub("\\[", "", new.data$isNew)
+  
+  #######
+  
+  new.data$commune.id <- matrix(unlist(str_split(new.data$commune, ", ")), ncol = 2, byrow = T)[,1]
+  new.data$commune.name <- matrix(unlist(str_split(new.data$commune, ", ")), ncol = 2, byrow = T)[,2]
+
   
   data[[i]] <- new.data
 }
 
-#####
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#########
 
 test <- x[[1]]
 test$`C/S Fund` <- gsub(",", "", test$`C/S Fund`)
 sum(as.numeric(unlist(str_split(test$`C/S Fund`, " "))), na.rm = T)
+sum(data[[1]]$cs.fund)
 
-#####
+test2 <- x[[6]]
+test2$`Local Contrib.` <- gsub(",", "", test2$`Local Contrib.`)
+sum(as.numeric(unlist(str_split(test2$`Local Contrib.`, " "))), na.rm = T)
+sum(data[[6]]$local.cont)
+
+test3 <- x[[1]]
+test3$`Local Contrib.` <- gsub(",", "", test3$`Local Contrib.`)
+sum(as.numeric(unlist(str_split(test3$`Local Contrib.`, " "))), na.rm = T)
+sum(data[[1]]$local.cont)
+
+#########
+
+
+
+
+
+
+
+
+
+
+
 names <- c("Banteay Meanchey", "Battambang", "Kampong Cham", "Kampong Chhnang", "Kampong Speu", "Kampong Thom", "Kampot", 
   "Kandal", "Koh Kong", "Kratie", "Mondul Kiri", "Phnom Penh", "Preah Vihear", "Prey Veng", "Pursat", "Ratanak Kiri", 
   "Siemreap", "Preah Sihanouk", "Stung Treng", "Svay Rieng", "Takeo", "Oddar Meanchey", "Kep", "Pailin", "Tboung Khmum")
 
-save(x, file = "~/Box Sync/cambodia_eba_gie/PID/pid_excel_2016/pid_2016_r_list.RData")
-
-
-
+#save(x, file = "~/Box Sync/cambodia_eba_gie/PID/pid_excel_2016/pid_2016_r_list.RData")
 # for(i in 1:100) {
 #   assign(names(data)[i], data[[i]])
 #   
