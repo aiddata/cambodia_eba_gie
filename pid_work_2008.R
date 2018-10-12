@@ -22,6 +22,20 @@ contract.output <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/Co
 contract.output <- contract.output[!duplicated(contract.output$ContractID),c("ContractID", "linkProjectID")]
 contract <- merge(contract, contract.output, by="ContractID")
 
+amendment <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/Amendment.xlsx")
+amendment$rm <- NA
+for(i in unique(amendment$ContractID)) {
+  temp.amend <- amendment[amendment$ContractID==i,]
+  if(nrow(temp.amend)>1) {
+    temp.amend$rm <- ifelse(temp.amend$New_End_Date==max(temp.amend$New_End_Date), 0, 1)
+  } else {temp.amend$rm <- 0}
+  amendment[amendment$ContractID==i,] <- temp.amend
+}
+amendment <- amendment[amendment$rm==0,]
+amendment <- amendment[-306,]
+
+contract <- merge(contract, amendment, by="ContractID", all.x = T)
+
 ###################
 
 output <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/Output.xlsx")
@@ -78,6 +92,8 @@ for(i in unique(contract$linkProjectID)) {
   }
 }
 
+proj.cont$EndDate[!(is.na(proj.cont$New_End_Date))] <- proj.cont$New_End_Date[!(is.na(proj.cont$New_End_Date))]
+
 proj.cont$plannedstartyear <- matrix(unlist(str_split(as.character(proj.cont$StartDate), "-")), ncol = 3, byrow = T)[,1]
 proj.cont$plannedstartmonth <- matrix(unlist(str_split(as.character(proj.cont$StartDate), "-")), ncol = 3, byrow = T)[,2]
 
@@ -92,7 +108,7 @@ proj.cont <- proj.cont[,c("ProjectID", "ContractID", "ProjTypeID", "NameE.y.x", 
                           "isNew", "NameE.y.y", "plannedstartyear", "plannedstartmonth",
                           "plannedendyear", "plannedendmonth", "actualendyear", "actualendmonth",
                           "last.report", "progress", "Bidders", "FundCS", "FundLocalContr", "VillGis")] #no subsector, need competitive bidding dummy
-names(proj.cont) <- c("project_id", "contract_id", "activity.type.num", "activity.type", "activity.desc.num", 
+names(proj.cont) <- c("project.id", "contract.id", "activity.type.num", "activity.type", "activity.desc.num", 
                       "activity.desc", "new.repair.num", "new.repair", "planned.start.yr", "planned.start.mo",
                       "planned.end.yr", "planned.end.mo", "actual.end.yr", "actual.end.mo", "last.report",
                       "status", "n.bidders", "cs.fund", "local.cont", "vill.id")

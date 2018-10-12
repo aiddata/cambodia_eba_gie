@@ -151,7 +151,7 @@ project <- project[,c("Id.x", "Id.y", "RILGPProjectTypeId", "Name_EN.y.y.2", "RI
                       "plannedendyear", "plannedendmonth", "actualendyear", "actualendmonth", "last.report",
                       "progress", "Bidders", "AwardedByBidding", "cs.fund", "local.cont", "VillageId.x")]
 #assigning meaningful names to the variables in the data
-names(project) <- c("project_id", "contract_id", "activity.type.num", "activity.type", "activity.desc.num",
+names(project) <- c("project.id", "contract.id", "activity.type.num", "activity.type", "activity.desc.num",
                     "activity.desc", "subsector", "new.repair.num", "new.repair", "planned.start.yr",
                     "planned.start.mo", "actual.start.yr", "actual.start.mo", "planned.end.yr", "planned.end.mo",
                     "actual.end.yr", "actual.end.mo", "last.report", "status", "n.bidders", "bid.dummy", "cs.fund",
