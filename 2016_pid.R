@@ -63,18 +63,48 @@ for(i in 1:99) {
     
     y <- length(comm.rows[k]:comm.rows[k+1])-2
     
+    #####
+    
     cs.fund2 <- unlist(strsplit(cs.fund[k]," "))[1]
     cs.fund2 <- gsub(",", "", cs.fund2)
     local.cont2 <- unlist(strsplit(local.cont[k]," "))[1]
     local.cont2 <- gsub(",", "", local.cont2)
     
-    cs.fund2 <- as.numeric(cs.fund2)/y
-    local.cont2 <- as.numeric(local.cont2)/y
+    if(k+1==length(comm.rows)) {
+      
+      cs.fund2 <- as.numeric(cs.fund2)/(y+1)
+      local.cont2 <- as.numeric(local.cont2)/(y+1)
+      
+    } else {
+      
+      cs.fund2 <- as.numeric(cs.fund2)/y
+      local.cont2 <- as.numeric(local.cont2)/y
+      
+    }
+     
+    #####
+    
+    # cs.fund2 <- unlist(strsplit(cs.fund[k]," "))[1]
+    # cs.fund2 <- gsub(",", "", cs.fund2)
+    # local.cont2 <- unlist(strsplit(local.cont[k]," "))[1]
+    # local.cont2 <- gsub(",", "", local.cont2)
+    
+    # cs.fund2 <- as.numeric(cs.fund2)/y
+    # local.cont2 <- as.numeric(local.cont2)/y
     
     new.data$cs.fund[comm.rows[k]:comm.rows[k+1]] <- cs.fund2
     new.data$local.cont[comm.rows[k]:comm.rows[k+1]] <- local.cont2
     
+    #####
     
+    # if(k+1==length(comm.rows)) {
+    #   
+    #   cs.fund2 <- as.numeric(cs.fund2)/(y+1)
+    #   local.cont2 <- as.numeric(local.cont2)/(y+1)
+    #   
+    # }
+    
+    #####
     
   }
 
@@ -90,9 +120,9 @@ for(i in 1:99) {
 
 #####
 
-test <- data[[1]]
+test <- x[[1]]
 test$`C/S Fund` <- gsub(",", "", test$`C/S Fund`)
-sum(as.numeric(unlist(str_split(test$`C/S Fund`, " "))), na.rm = )
+sum(as.numeric(unlist(str_split(test$`C/S Fund`, " "))), na.rm = T)
 
 #####
 names <- c("Banteay Meanchey", "Battambang", "Kampong Cham", "Kampong Chhnang", "Kampong Speu", "Kampong Thom", "Kampot", 
