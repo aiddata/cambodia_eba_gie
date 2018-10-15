@@ -145,13 +145,13 @@ project$actualendmonth[!is.na(project$ActualWorkCompletionOn)] <-
 #changing the one variable name that is duplicated
 names(project)[151] <- "Name_EN.y.y.2"
 #only retaining the necessary variables from the merged project-contract data
-project <- project[,c("Id.x", "Id.y", "RILGPProjectTypeId", "Name_EN.y.y.2", "RILGPOutputCategoryId",
+project <- project[,c("Id.x", "Id.y", "Name_EN.y.y.2",
                       "Name_EN.y.y", "SubSectorId.x", "List_Project_Output_Type_ID", "Name_EN.y.x",
                       "plannedstartyear", "plannedstartmonth", "actualstartyear", "actualstartmonth",
                       "plannedendyear", "plannedendmonth", "actualendyear", "actualendmonth", "last.report",
                       "progress", "Bidders", "AwardedByBidding", "cs.fund", "local.cont", "VillageId.x")]
 #assigning meaningful names to the variables in the data
-names(project) <- c("project.id", "contract.id", "activity.type.num", "activity.type", "activity.desc.num",
+names(project) <- c("project.id", "contract.id", "activity.type",
                     "activity.desc", "subsector", "new.repair.num", "new.repair", "planned.start.yr",
                     "planned.start.mo", "actual.start.yr", "actual.start.mo", "planned.end.yr", "planned.end.mo",
                     "actual.end.yr", "actual.end.mo", "last.report", "status", "n.bidders", "bid.dummy", "cs.fund",

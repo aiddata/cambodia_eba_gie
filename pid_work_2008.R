@@ -104,15 +104,17 @@ proj.cont$actualendyear[!is.na(proj.cont$CompletionDate)] <-
 proj.cont$actualendmonth[!is.na(proj.cont$CompletionDate)] <- 
   matrix(unlist(str_split(as.character(proj.cont$CompletionDate[!is.na(proj.cont$CompletionDate)]), "-")), ncol = 3, byrow = T)[,2]
 
-proj.cont <- proj.cont[,c("ProjectID", "ContractID", "ProjTypeID", "NameE.y.x", "OutputID", "Name",
+proj.cont <- proj.cont[,c("ProjectID", "ContractID", "NameE.y.x", "Name", "ProjTypeID",
                           "isNew", "NameE.y.y", "plannedstartyear", "plannedstartmonth",
                           "plannedendyear", "plannedendmonth", "actualendyear", "actualendmonth",
                           "last.report", "progress", "Bidders", "FundCS", "FundLocalContr", "VillGis")] #no subsector, need competitive bidding dummy
-names(proj.cont) <- c("project.id", "contract.id", "activity.type.num", "activity.type", "activity.desc.num", 
-                      "activity.desc", "new.repair.num", "new.repair", "planned.start.yr", "planned.start.mo",
+names(proj.cont) <- c("project.id", "contract.id", "activity.type", 
+                      "activity.desc", "subsector", "new.repair.num", "new.repair", "planned.start.yr", "planned.start.mo",
                       "planned.end.yr", "planned.end.mo", "actual.end.yr", "actual.end.mo", "last.report",
                       "status", "n.bidders", "cs.fund", "local.cont", "vill.id")
 
 write.csv(proj.cont, "~/Box Sync/cambodia_eba_gie/PID/completed_pid/pid_2008.csv", row.names = F)
+
+
 
 
