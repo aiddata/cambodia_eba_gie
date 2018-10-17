@@ -142,6 +142,20 @@ project$actualendyear[!is.na(project$ActualWorkCompletionOn)] <-
 project$actualendmonth[!is.na(project$ActualWorkCompletionOn)] <- 
   matrix(unlist(str_split(as.character(project$ActualWorkCompletionOn[!is.na(project$ActualWorkCompletionOn)]), "-")), ncol = 3, byrow = T)[,2]
 
+# sum(is.na(project$actualendyear))
+# sum(is.na(project$actualendyear) & project$progress=="100" & !is.na(project$last.report))
+
+for(i in 1:nrow(project)) {
+  if(!is.na(project$progress[i])) {
+    if(is.na(project$actualendyear[i]) & project$progress[i]=="100") {
+      project$actualendyear[i] <- project$last.report[i]
+      project$actualendyear[i] <- unlist(strsplit(project$actualendyear[i], "-"))[1]
+    }
+  }
+}
+
+# sum(is.na(project$actualendyear))
+
 #changing the one variable name that is duplicated
 names(project)[151] <- "Name_EN.y.y.2"
 #only retaining the necessary variables from the merged project-contract data

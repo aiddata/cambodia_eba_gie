@@ -166,6 +166,12 @@ pid2016$commvill <- paste(pid2016$commune.name, pid2016$Village)
 
 pid2016 <- pid2016[(pid2016$commvill %in% gazetteer.full$commvill),]
 pid2016 <- pid2016[!(pid2016$commvill %in% commvill.dups),]
+
+x <- merge(pid2016, gazetteer.full, by = "commvill")
+
+pid2016$village.id <- x$Id.y
+
+
 pid2016 <- pid2016[,c("Reference", "Id", "activity", 
                       "SubSectorId", "isNew", "plannedstartyear", "plannedstartmonth",
                       "actualstartyear", "actualstartmonth", "plannedendyear", "plannedendmonth",

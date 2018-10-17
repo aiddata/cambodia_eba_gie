@@ -104,6 +104,35 @@ proj.cont$actualendyear[!is.na(proj.cont$CompletionDate)] <-
 proj.cont$actualendmonth[!is.na(proj.cont$CompletionDate)] <- 
   matrix(unlist(str_split(as.character(proj.cont$CompletionDate[!is.na(proj.cont$CompletionDate)]), "-")), ncol = 3, byrow = T)[,2]
 
+# cont.abandon <- read_excel("~/box sync/cambodia_eba_gie/pid/pid_excel_2008/tblcontract_abandon.xlsx")
+# proj.cont <- merge(proj.cont, cont.abandon, by.x = "ContractID", by.y = "ContractID", all.x = T)
+
+# sum(is.na(proj.cont$actualendyear))
+# sum(is.na(proj.cont$FY))
+# sum(is.na(proj.cont$actualendyear) & proj.cont$progress=="100" & !is.na(proj.cont$last.report)) #####add this
+
+for(i in 1:nrow(proj.cont)) {
+  if(!is.na(proj.cont$progress[i])) {
+    if(is.na(proj.cont$actualendyear[i]) & proj.cont$progress[i]=="100") {
+      proj.cont$actualendyear[i] <- proj.cont$last.report[i]
+      proj.cont$actualendyear[i] <- unlist(strsplit(proj.cont$actualendyear[i], "-"))[1]
+    }
+  }
+}
+
+sum(is.na(proj.cont$actualendyear))
+View(proj.cont[,c("ContractID", "actualendyear", "progress", "last.report", "actualendyearnew")])
+
+# missing.ends <- proj.cont[is.na(proj.cont$actualendyear),]
+# length(unique(missing.ends$ContractID))
+# length(unique(missing.ends$ProjectID))
+# missing.ends2 <- as.data.frame(missing.ends[0,])
+# for(i in unique(missing.ends$ContractID)) {
+#   temp <- missing.ends[missing.ends$ContractID==i,]
+#   missing.ends2[i,] <- temp[which.max(as.numeric(temp$progress))[1],]
+#   
+# }
+
 proj.cont <- proj.cont[,c("ProjectID", "ContractID", "NameE.y.x", "Name", "ProjTypeID",
                           "isNew", "NameE.y.y", "plannedstartyear", "plannedstartmonth",
                           "plannedendyear", "plannedendmonth", "actualendyear", "actualendmonth",

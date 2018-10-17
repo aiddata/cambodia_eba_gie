@@ -146,8 +146,9 @@ full.data$geo <- gsub(" ", "", full.data$geo)
 full.data$lat <- matrix(unlist(str_split(full.data$geo, ",")), ncol = 2, byrow = T)[,1]
 full.data$long <- matrix(unlist(str_split(full.data$geo, ",")), ncol = 2, byrow = T)[,2]
 
+full.data <- full.data[!duplicated(full.data$vill_code),]
 write.csv(full.data[,c("vill_code", "vill_name", "province_name", "total_pop", "lat", "long")], 
-          "~/Desktop/full_data.csv", row.names = F)
+          "~/Desktop/shape_data.csv", row.names = F)
 
 
 aims <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/eba_province_panel.csv", stringsAsFactors = F)[,-1]
