@@ -113,40 +113,61 @@ rm(merge_grid_1000_lite)
 sum(is.na(data$actual.end.yr))
 data <- data[!is.na(data$actual.end.yr),]
 
+###################
+
+#grid_1000_matched_data$village_point_ids <- as.character(as.numeric(grid_1000_matched_data$village_point_ids))
 id.list <- list()
 for(i in 1:nrow(grid_1000_matched_data)) {
   if(grid_1000_matched_data$village_point_ids[i]=="") {
     id.list[[i]] <- ""
   } else {
-    id.list[[i]] <- unlist(strsplit(grid_1000_matched_data$village_point_ids[i], split = "\\|"))
+    id.list[[i]] <- as.character(as.numeric(unlist(strsplit(grid_1000_matched_data$village_point_ids[i], split = "\\|"))))
   }
 }
 
 
-i=data$VillGis[85]
+# i=as.character(data$VillGis[82])
+# which(data$VillGis %in% as.numeric(unlist(str_split(grid_1000_matched_data$village_point_ids, "\\|"))))[1:20]
+# which(as.numeric(unlist(str_split(grid_1000_matched_data$village_point_ids, "\\|"))) %in% data$VillGis[82])
+# 
+# grid_1000_matched_data$village_point_ids[9065]
 
-
-
+#i=data$VillGis[82]
+proj.geo <- cbind(data[0,], grid_1000_matched_data[0,])
 for(i in unique(data$VillGis)) {
   
   temp <- data[data$VillGis==i,]
   
+  # c(temp[1,c(1:6, 502:518, 522:537)], 
+  #   colMeans(apply(temp[,c(7:501, 519:521)], 2, as.numeric), na.rm = T))
+  
   grid <- unlist(lapply(id.list, function(x) i %in% x))
   
-  for(j in unique(temp$actual.end.yr)) {
+  if(sum(grid) > 0) {
     
-    temp2 <- temp[temp$actual.end.yr==j,]
-    n.proj <- nrow(temp2)
+    rows <- (nrow(proj.geo)+1):(nrow(proj.geo)+sum(grid))
     
+    proj.geo[rows, ] <- c(temp[1,c(1:6, 502:518, 522:537)], 
+                          colMeans(apply(temp[,c(7:501, 519:521)], 2, as.numeric), na.rm = T), 
+                          grid_1000_matched_data[grid,])
     
-    
-    
+    proj.geo$first.end.date[rows] <- min(temp$actual.end.yr, na.rm = T)
     
   }
   
+  # grid_1000_matched_data$earliest
+  # 
+  # min(temp$actual.end.yr)
+  
+  # for(j in unique(temp$actual.end.yr)) {
+  #   
+  #   temp2 <- temp[temp$actual.end.yr==j,]
+  #   n.proj <- length(unique(temp2$contract.id))
+  #   
+  # }
 }
 
-
+write.csv(proj.geo, )
 
 grid_1000_matched_data$village_point_ids[20]
 
