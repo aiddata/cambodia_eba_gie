@@ -9,7 +9,11 @@
 library(readxl)
 library(stringr)
 
+###########################
 ## Read in main "contract" file with one entry per contract id (can be multiple contracts per project id)
+## And add in additional information from other files from Cambodia Access database
+###########################
+
 contract <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/Contract.xlsx")
 length(unique(contract$ContractID))
 progress <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/Progress.xlsx")
@@ -59,10 +63,11 @@ amendment <- amendment[-306,]
 contract <- merge(contract, amendment, by="ContractID", all.x = T)
 
 ###################
+## Merge in Ancillary Information at Project Level
+##################
 
-## merging ancillary datasets with the project output dataset
+## Merging ancillary datasets with the project output dataset to get descriptive information
 
-# Connect ****
 output <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/Output.xlsx")
 #identify specific activities for contracts using Output ID
 project.output <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/ProjectOutput.xlsx")
@@ -88,7 +93,6 @@ output.categories <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/
 sum(project.output$CategoryID %in% output.categories$ID)
 project.output <- merge(project.output, output.categories, by.x="CategoryID", by.y="ID")
 
-#####
 
 ## Merging project output dataset (multiple rows per project) with the project dataset (one row per project, project-level data)
 
@@ -109,6 +113,9 @@ project <- merge(project, project.output, by.x="ProjectID", by.y="ProjectID")
 x <- unlist(lapply(project, class))
 project[,x[!(x=="POSIXt")]=="POSIXct"] <- lapply(project[,x[!(x=="POSIXt")]=="POSIXct"], as.character)
 
+##########################
+## Merge Project and Contract Data
+##########################
 
 ## Merge Project and Contract data (multiple contracts per project AND multiple villages per contract)
 # Want to end up with unique project/contract/order identifier
@@ -139,6 +146,7 @@ for(i in unique(contract$linkProjectID)) {
   }
 }
 
+## Clean Up Data for later analysis
 
 proj.cont$EndDate[!(is.na(proj.cont$New_End_Date))] <- proj.cont$New_End_Date[!(is.na(proj.cont$New_End_Date))]
 
@@ -184,6 +192,8 @@ sum(is.na(proj.cont$actualendyear))
 # }
 
 #only keeping necessary columns and renaming as necessary
+# each row is a unique project + contract + village combination
+#note: can be multiple contracts per project and multiple villages per contract
 proj.cont <- proj.cont[,c("ProjectID", "ContractID", "NameE.y.x", "Name", "ProjTypeID",
                           "isNew", "NameE.y.y", "plannedstartyear", "plannedstartmonth",
                           "plannedendyear", "plannedendmonth", "actualendyear", "actualendmonth",
