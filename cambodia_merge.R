@@ -63,18 +63,25 @@ pid$bid.dummy <- ifelse(pid$n.bidders==0, 0, 1)
 ###################
 
 rm(list = setdiff(ls(), "pid"))
-cdb <- read_excel("~/Box Sync/cambodia_eba_gie/inputData/CDB_merged_final.xlsx")
-shape <- read.csv("~/box sync/cambodia_eba_gie/inputdata/village_grid_files/village_data.csv")
+cdb <- read_excel("~/Box Sync/cambodia_eba_gie/inputData/CDB_merged_final.xlsx")[,c("VillGis", "Year", "MAL_TOT", "FEM_TOT")]
+shape <- read.csv("~/box sync/cambodia_eba_gie/inputdata/village_grid_files/village_data.csv", 
+                  stringsAsFactors = F)
 
 sum(cdb$VillGis %in% shape$VILL_CODE)
 cdb <- merge(cdb, shape, by.x = "VillGis", by.y = "VILL_CODE")
+cdb$TOTPOP <- as.numeric(cdb$MAL_TOT) + as.numeric(cdb$FEM_TOT)
 
 hist(cdb$MAL_TOT[cdb$MAL_TOT<10000])
 which(cdb$MAL_TOT>10000)
+
 # View(cdb[cdb$VillGis==cdb$VillGis[65740],])
 #get some weird results when comparing high pop village population by year, ie row 65740
 
-cdb <- cdb[-c(6650, 15070, 19122),]
+which(cdb$TOTPOP>15000)
+View(cdb[cdb$VillGis==cdb$VillGis[21815],])
+cdb <- cdb[-c(6621, 15299, 21815),]
+
+#cdb <- cdb[-c(6650, 15070, 19122),]
 # villages 65731 65732 65733 65734 65736 65738 65739 65740 65744 OK
 
 which(cdb$MOTO_NUM>10000)
@@ -133,7 +140,10 @@ for(i in 1:nrow(grid_1000_matched_data)) {
 # grid_1000_matched_data$village_point_ids[9065]
 
 #i=data$VillGis[82]
-proj.geo <- cbind(data[0,], grid_1000_matched_data[0,])
+proj.geo <- cbind(data[1,], grid_1000_matched_data[1,c(1:6, which(grepl("v4composites", names(grid_1000_matched_data))))])
+proj.geo[sort(paste0("pop", unique(temp$Year)))] <- NA
+proj.geo <- proj.geo[0,]
+ 
 for(i in unique(data$VillGis)) {
   
   temp <- data[data$VillGis==i,]
@@ -145,13 +155,24 @@ for(i in unique(data$VillGis)) {
   
   if(sum(grid) > 0) {
     
-    rows <- (nrow(proj.geo)+1):(nrow(proj.geo)+sum(grid))
+    #rows <- c(nrow(proj.geo)+1):(nrow(proj.geo)+length(unique(paste(temp$project.id, temp$contract.id))))
+    rows <- c(nrow(proj.geo)+1):(nrow(proj.geo)+sum(grid))
     
-    proj.geo[rows, ] <- c(temp[1,c(1:6, 502:518, 522:537)], 
-                          colMeans(apply(temp[,c(7:501, 519:521)], 2, as.numeric), na.rm = T), 
-                          grid_1000_matched_data[grid,])
+    proj.geo[rows, ] <- cbind(temp[1, c(1:2, 140:175)],
+                              grid_1000_matched_data[rows, c(1:6, which(grepl("v4composites", names(grid_1000_matched_data))))],
+                              sort(temp$TOTPOP))
+    
+    
+    #View(temp[!duplicated(paste(temp$project.id, temp$contract.id)), c(1:2, 140:175)])
+    
     
     proj.geo$first.end.date[rows] <- min(temp$actual.end.yr, na.rm = T)
+    
+    for(j in unique(temp$Year)) {
+      
+      proj.geo[rows]
+      
+    }
     
   }
   
@@ -165,9 +186,18 @@ for(i in unique(data$VillGis)) {
   #   n.proj <- length(unique(temp2$contract.id))
   #   
   # }
+  
+  if(nrow(proj.geo) %% 100==0) {
+    cat(nrow(proj.geo), "of", length(unique(data$VillGis)), "\n")
+  }
 }
 
-write.csv(proj.geo, )
+which(duplicated(proj.geo$VillGis))
+View(proj.geo[proj.geo$VillGis=="1020106",])
+
+
+
+#write.csv(proj.geo, )
 
 grid_1000_matched_data$village_point_ids[20]
 
