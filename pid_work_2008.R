@@ -1,13 +1,22 @@
 
+#-----------------------------
+# GIE of Cambodia Public Infrastructure and Local Governance Program
+# For SIDA / EBA
+# Compiling Project Information Database (from Cambodia) for 2003-2008
+# Will use project completion dates to create treatment info
+#------------------------------
+
 library(readxl)
 library(stringr)
 
+## Read in main "contract" file with one entry per contract id (can be multiple contracts per project id)
 contract <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/Contract.xlsx")
 length(unique(contract$ContractID))
 progress <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/Progress.xlsx")
 
 #iterating through all unique contract IDs in the progress dataset to identify, for each unique ID, the last date a progress report was
 #submitted and the progress value assigned in that report
+#will use report date as project end date when actual end date is missing AND progress value is 100%
 contract[,c("last.report", "progress")] <- NA
 for(i in unique(progress$ContractID)) {
   temp.contract <- contract[contract$ContractID==i,]
@@ -21,67 +30,88 @@ for(i in unique(progress$ContractID)) {
   contract[contract$ContractID==i,c("last.report","progress")] <- temp.contract[,c("last.report","progress")]
 }
 
+## Identifying Project ID associated with Contract
 contract.output <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/ContractOutput.xlsx")
-#remove duplicate observations from the contract.output dataset
+#remove duplicate observations from the contract.output dataset to identify project id for each contract
 contract.output <- contract.output[!duplicated(contract.output$ContractID),c("ContractID", "linkProjectID")]
+#merge "linkProjectID" into main contract dataset
 contract <- merge(contract, contract.output, by="ContractID")
 
+## Adding changed/updated contract end dates from "amendment" file
 amendment <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/Amendment.xlsx")
+#check for duplicate contract ids
+length(unique(amendment$ContractID))
 
 #this chunk is where I replace applicable actual.end.dates in the main dataset with end dates from the amendments dataset
 amendment$rm <- NA
 for(i in unique(amendment$ContractID)) {
   temp.amend <- amendment[amendment$ContractID==i,]
   if(nrow(temp.amend)>1) {
-    #making sure the date we are using from the amendments dataset is the most "up to date" amended end date
+    #making sure the date we are using from the amendments dataset is the most "up to date" amended end date given duplicate Contract IDs
     temp.amend$rm <- ifelse(temp.amend$New_End_Date==max(temp.amend$New_End_Date), 0, 1)
   } else {temp.amend$rm <- 0}
   amendment[amendment$ContractID==i,] <- temp.amend
 }
 amendment <- amendment[amendment$rm==0,]
+#eliminate duplicate Contract ID (had same end date so wasn't eliminated by max New_End_Date code above)
 amendment <- amendment[-306,]
 
 contract <- merge(contract, amendment, by="ContractID", all.x = T)
 
 ###################
 
-#merging ancillary datasets with the project output dataset
+## merging ancillary datasets with the project output dataset
+
+# Connect ****
 output <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/Output.xlsx")
+#identify specific activities for contracts using Output ID
 project.output <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/ProjectOutput.xlsx")
 sum(output$OutputID %in% project.output$OutputID)
+#merge sector info into project.output
 project.output <- merge(project.output, output, by.x="OutputID", by.y="OutputID")
 
+#identify and merge in output type info (e.g. new, repair) 
 output.type <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/OutputType.xlsx")
 sum(project.output$isNew %in% output.type$OPTypeID)
 project.output <- merge(project.output, output.type, by.x="isNew", by.y="OPTypeID")
 
 length(unique(paste(project.output$OutputID, project.output$ProjectID)))
 
+#identify project + order number activities, merge into project.output
 table3 <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/Table3.xlsx")
 table3 <- table3[!duplicated(table3$OutputID),]
 sum(project.output$OutputID %in% table3$OutputID)
 project.output <- merge(project.output, table3, by.x="OutputID", by.y="OutputID")
 
+#identify sub-sector for each project + order number
 output.categories <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/OutputCategories.xlsx")
 sum(project.output$CategoryID %in% output.categories$ID)
 project.output <- merge(project.output, output.categories, by.x="CategoryID", by.y="ID")
 
 #####
 
-#merging project output dataset with the project dataset
+## Merging project output dataset (multiple rows per project) with the project dataset (one row per project, project-level data)
+
+#get overall project sector info
+#Project dataset only has one row per project
 project <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/Project.xlsx")
 proj.type <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/ProjType.xlsx")
 sum(project$ProjTypeID %in% proj.type$ProjTypeID)
+#merge in ProjTypeID classification, which gives overall project sector
 project <- merge(project, proj.type, by.x="ProjTypeID", by.y="ProjTypeID")
-
-#####
 
 rm(list=setdiff(ls(), c("contract", "project", "project.output")))
 
+#merge project output (multiple rows per project) with project information, which will repeat over duplicate projects
 project <- merge(project, project.output, by.x="ProjectID", by.y="ProjectID")
+
 #changing the classes of date variables to character
 x <- unlist(lapply(project, class))
 project[,x[!(x=="POSIXt")]=="POSIXct"] <- lapply(project[,x[!(x=="POSIXt")]=="POSIXct"], as.character)
+
+
+## Merge Project and Contract data (multiple contracts per project AND multiple villages per contract)
+# Want to end up with unique project/contract/order identifier
 
 #creating skeleton dataset to merge project and contract data
 proj.cont <- cbind(project[0,], contract[0,])
