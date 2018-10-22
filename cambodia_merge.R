@@ -13,7 +13,6 @@ pid$project.length <- (((pid$actual.end.yr-pid$actual.start.yr)*12)+(pid$actual.
 for(i in 1:nrow(pid)) {
   if(is.na(pid$actual.end.yr[i])) {
     if(is.na(pid$actual.start.yr[i]) & !is.na(pid$ProvEn[i])) {
-      
       temp <- mean(pid$project.length[(pid$planned.start.yr==pid$planned.start.yr[i] & pid$ProvEn==pid$ProvEn[i])], na.rm = T)
       
       pid$actual.end.yr[i] <- pid$planned.start.yr[i] + floor((pid$planned.start.mo[i]+temp)/12)
@@ -132,48 +131,45 @@ for(i in 1:nrow(grid_1000_matched_data)) {
   }
 }
 
-
-# i=as.character(data$VillGis[82])
-# which(data$VillGis %in% as.numeric(unlist(str_split(grid_1000_matched_data$village_point_ids, "\\|"))))[1:20]
-# which(as.numeric(unlist(str_split(grid_1000_matched_data$village_point_ids, "\\|"))) %in% data$VillGis[82])
-# 
-# grid_1000_matched_data$village_point_ids[9065]
+proj.geo <- cbind(data[1,c(1:2, 140:175)], grid_1000_matched_data[1,c(1:6, which(grepl("v4composites", names(grid_1000_matched_data))))])
+proj.geo[sort(paste0("pop", unique(data$Year)))] <- NA
+proj.geo <- proj.geo[0,]
 
 #i=data$VillGis[82]
-proj.geo <- cbind(data[1,], grid_1000_matched_data[1,c(1:6, which(grepl("v4composites", names(grid_1000_matched_data))))])
-proj.geo[sort(paste0("pop", unique(temp$Year)))] <- NA
-proj.geo <- proj.geo[0,]
- 
+#i=1020117
+#i=3161501
+count <- 1
 for(i in unique(data$VillGis)) {
-  
   temp <- data[data$VillGis==i,]
-  
-  # c(temp[1,c(1:6, 502:518, 522:537)], 
-  #   colMeans(apply(temp[,c(7:501, 519:521)], 2, as.numeric), na.rm = T))
-  
+  temp$id <- seq(1, nrow(temp), 1)
+
   grid <- unlist(lapply(id.list, function(x) i %in% x))
   
   if(sum(grid) > 0) {
-    
     #rows <- c(nrow(proj.geo)+1):(nrow(proj.geo)+length(unique(paste(temp$project.id, temp$contract.id))))
     rows <- c(nrow(proj.geo)+1):(nrow(proj.geo)+sum(grid))
     
-    proj.geo[rows, ] <- cbind(temp[1, c(1:2, 140:175)],
-                              grid_1000_matched_data[rows, c(1:6, which(grepl("v4composites", names(grid_1000_matched_data))))],
-                              sort(temp$TOTPOP))
+
+    #temp$TOTPOP[order(unique(temp$Year))]
+    #may have to edit this further if the shorter vectors dont properly house in the df
+    proj.geo[rows, ] <- c(temp[1, c(1:2, 140:175)],
+                          grid_1000_matched_data[rows, c(1:6, which(grepl("v4composites", names(grid_1000_matched_data))))])
     
+    proj.geo[rows, paste0("pop", sort(unique(temp$Year)))] <- temp$TOTPOP[order(unique(temp$Year))]
     
-    #View(temp[!duplicated(paste(temp$project.id, temp$contract.id)), c(1:2, 140:175)])
-    
-    
-    proj.geo$first.end.date[rows] <- min(temp$actual.end.yr, na.rm = T)
-    
-    for(j in unique(temp$Year)) {
-      
-      proj.geo[rows]
-      
+    if(length(temp$TOTPOP[order(unique(temp$Year))]) < 9) {
+      proj.geo[rows, paste0("pop", unique(data$Year)[!(unique(data$Year) %in% temp$Year)])] <- NA
     }
     
+    # str(c(temp[1, c(1:2, 140:175)],
+    #       grid_1000_matched_data[rows, c(1:6, which(grepl("v4composites", names(grid_1000_matched_data))))],
+    #       temp$TOTPOP[order(temp$Year)[seq(1, length(temp$Year), 2)]]))
+    # 
+    # str(grid_1000_matched_data[rows, c(1:6, which(grepl("v4composites", names(grid_1000_matched_data))))])
+    # str(temp$TOTPOP[order(temp$Year)[seq(1, length(temp$Year), 2)]])
+    # str(temp[1, c(1:2, 140:175)])
+    
+    proj.geo$first.end.date[rows] <- min(temp$actual.end.yr, na.rm = T)
   }
   
   # grid_1000_matched_data$earliest
@@ -186,39 +182,35 @@ for(i in unique(data$VillGis)) {
   #   n.proj <- length(unique(temp2$contract.id))
   #   
   # }
+  cat(count, "of", length(unique(data$VillGis)))
   
-  if(nrow(proj.geo) %% 100==0) {
-    cat(nrow(proj.geo), "of", length(unique(data$VillGis)), "\n")
-  }
+  # if(count %% 100==0) {
+  #   #cat(count, "of", length(unique(data$VillGis)), "\n")
+  #   
+  # }
+  count <- count+1
 }
+
+proj.geo<- proj.geo[,!(names(proj.geo) %in% c("XCOOR", "YCOOR", "latitude", "longitude", "ProvKH", "DistTypeKh", 
+                                               "DistKh", "CommTypeKh", "Name_KH"))]
+
+names(proj.geo)[grepl("v4c", names(proj.geo))] <- paste0("ntl_", 1992:2013)
+
+write.csv(proj.geo, "~/Desktop/test_panel.csv", row.names = F)
+
+View(data[data$VillGis==3161501,])
+
+
+#proj.geo$trt <- ifelse(proj.geo$Year >= proj.geo$first.end.date, 1, 0)
+View(proj.geo[,c("Year", "first.end.date", "trt")])
+
+write.csv(proj.geo, "~/Desktop/test_panel.csv", row.names = F)
+
 
 which(duplicated(proj.geo$VillGis))
 View(proj.geo[proj.geo$VillGis=="1020106",])
 
 
 
-#write.csv(proj.geo, )
 
-grid_1000_matched_data$village_point_ids[20]
-
-
-
-which(data$VillGis %in% as.numeric(unlist(str_split(grid_1000_matched_data$village_point_ids, "\\|"))))[4]
-sum(data$VillGis %in% as.numeric(unlist(str_split(grid_1000_matched_data$village_box_ids, "\\|"))))
-
-which(as.numeric(unlist(str_split(grid_1000_matched_data$village_point_ids, "\\|"))) %in% data$VillGis[83])
-
-
-
-which(nchar(grid_1000_matched_data$village_point_ids)>8)
-
-
-"22050303" %in% id.list[[70]]
-
-fun <- unlist(lapply(grid_1000_matched_data$village_point_ids, function(x) "11020101" %in% x))
-
-
-
-
-which(res==T)
 
