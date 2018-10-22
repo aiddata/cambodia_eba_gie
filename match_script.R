@@ -2,6 +2,7 @@
 library(plyr)
 library(sf)
 library(readxl)
+library(stringr)
 
 setwd("~/box sync/cambodia_eba_gie")
 
@@ -28,6 +29,7 @@ punwath.data <- as.data.frame(st_read("inputdata/Cphum09-84-2016/Cphum09-84-2016
                                       stringsAsFactors = F))
 punwath.data$Code_Phum <- as.character(punwath.data$Code_Phum)
 punwath.data$Phum_Rom <- toupper(as.character(punwath.data$Phum_Rom))
+punwath.data$unverified <- 1
 
 ###################
 
@@ -36,6 +38,7 @@ shape.data <- as.data.frame(st_read("inputdata/census_2008_villages/Village.shp"
                                     stringsAsFactors = F))
 shape.data$VILL_CODE <- as.character(as.numeric(shape.data$VILL_CODE))
 shape.data$VILL_NAME <- toupper(as.character(shape.data$VILL_NAME))
+shape.data$unverified <- 0
 #some village codes include an extra 0 at the front of the number. I omit this zero to prevent incorrect mismatches
 # for(i in 1:nrow(shape.data)) {
 #   temp.id <- strsplit(shape.data[i, "VILL_CODE"], split = "")[[1]]
@@ -130,13 +133,12 @@ gazetteer.shape.fullmatch$Name_EN[is.na(gazetteer.shape.fullmatch$Name_EN)] <-
 #   gazetteer.shape.fullmatch$VILL_CODE[is.na(gazetteer.shape.fullmatch$Id)]
 
 #retaining only necessary columns for the matched datasets and aligning column names
-gazetteer.shape <- gazetteer.shape.fullmatch[,c("VILL_CODE", "ProvEn", "Name_EN", "geometry", "TOTPOP")]
-names(gazetteer.shape) <- c("vill_code", "province_name", "vill_name", "geometry", "total_pop")
-gazetteer.punwath <- gazetteer.punwath.fullmatch[,c("Code_Phum", "ProvEn", "Name_EN", "geometry")]
-names(gazetteer.punwath) <- c("vill_code", "province_name", "vill_name", "geometry")
+gazetteer.shape <- gazetteer.shape.fullmatch[,c("VILL_CODE", "ProvEn", "Name_EN", "geometry", "TOTPOP", "unverified")]
+names(gazetteer.shape) <- c("vill_code", "province_name", "vill_name", "geometry", "total_pop", "unverified")
+gazetteer.punwath <- gazetteer.punwath.fullmatch[,c("Code_Phum", "ProvEn", "Name_EN", "geometry", "unverified")]
+names(gazetteer.punwath) <- c("vill_code", "province_name", "vill_name", "geometry", "unverified")
 
 #binding matched shape/gazetteer data with matched punwath/gazetteer data
-library(stringr)
 
 full.data <- rbind.fill(gazetteer.shape, gazetteer.punwath)
 full.data$geo <- as.character(full.data$geometry)
@@ -149,5 +151,6 @@ full.data$lat <- matrix(unlist(str_split(full.data$geo, ",")), ncol = 2, byrow =
 full.data$long <- matrix(unlist(str_split(full.data$geo, ",")), ncol = 2, byrow = T)[,2]
 
 full.data <- full.data[!duplicated(full.data$vill_code),]
-write.csv(full.data[,c("vill_code", "vill_name", "province_name", "total_pop", "lat", "long")], 
+write.csv(full.data[,c("vill_code", "vill_name", "province_name", "total_pop", "unverified", "lat", "long")], 
           "processeddata/matched_shape_data.csv", row.names = F)
+

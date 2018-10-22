@@ -1,3 +1,10 @@
+#-----------------------------
+# GIE of Cambodia Public Infrastructure and Local Governance Program
+# For SIDA / EBA
+# Merging Project Information Database treatment data with covariate data from the Commune Database and 
+# spatio-temporal data measuring nighttime light of Cambodia from GeoQuery
+#------------------------------
+
 library(readxl)
 library(stringr)
 
