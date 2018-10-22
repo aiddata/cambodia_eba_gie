@@ -27,7 +27,7 @@ for(i in contract.budget.new[,"ContractId"]) {
   
   if(nrow(temp.output)>0) {
     #taking the sum of each contributions vector and dividing them by the number of observations of the
-    #contract ID value in the contract budget dataset. This will help avoid counting contributions by these
+    #contract ID value in the contract output dataset. This will help avoid counting contributions by these
     #funding sources multiple times
     contract.budget.new$cs.fund[contract.budget.new$ContractId==i] <- sum(temp.cs)/nrow(temp.output)
     contract.budget.new$local.cont[contract.budget.new$ContractId==i] <- sum(temp.lc)/nrow(temp.output)
