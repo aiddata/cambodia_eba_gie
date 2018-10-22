@@ -131,18 +131,33 @@ for(i in unique(contract$linkProjectID)) {
   temp.project <- project[project$ProjectID==i,]
   
   if(nrow(temp.project)!=0) {
-    #removing duplicate observations from project dataset
-    temp.project <- temp.project[!duplicated(temp.project$VillGis),]
-    
     #dividing the CS fund and local contribution columns by the number of rows in the temporary project dataset so when the datasets are
     #merged, these contribution numbers arent double counted
-    temp.contract[,c("FundCS", "FundLocalContr", "linkProjectID")] <- as.data.frame(matrix(c(temp.contract$FundCS/nrow(temp.project),
-                                                                                             temp.contract$FundLocalContr/nrow(temp.project),
+    temp.contract[,c("FundCS", "FundLocalContr", "linkProjectID")] <- as.data.frame(matrix(c(temp.contract$FundCS/(nrow(temp.project)*nrow(temp.contract)),
+                                                                                             temp.contract$FundLocalContr/(nrow(temp.project)*nrow(temp.contract)),
                                                                                              temp.contract$linkProjectID), ncol = 3))
+    
+    
+    # as.data.frame(matrix(rep(c(sum(temp.contract$FundCS)/nrow(temp.project),
+    #                        sum(temp.contract$FundLocalContr)/nrow(temp.project),
+    #                        temp.contract$linkProjectID), ), ncol = 3))
+    # 
+    
+    
+    
+    
+    
+    
     #merging subsetted project and contract data
-    temp.project <- merge(temp.project, temp.contract, by.x="ProjectID", by.y="linkProjectID")
+    temp.project2 <- merge(temp.project[!duplicated(temp.project$VillGis),], temp.contract, by.x="ProjectID", by.y="linkProjectID")
+    
+    for(j in unique(temp.project2$VillGis)) {
+      temp.project2$FundCS[temp.project2$VillGis==j] <- sum(temp.contract$FundCS)*(nrow(temp.project[temp.project$VillGis==j,]))
+      temp.project2$FundLocalContr[temp.project2$VillGis==j] <- sum(temp.contract$FundLocalContr)*(nrow(temp.project[temp.project$VillGis==j,]))
+    }
+    
     #including subsetted project and contract data in the skeleton dataset created above the loop
-    proj.cont[(nrow(proj.cont)+1):(nrow(proj.cont)+nrow(temp.project)),] <- temp.project
+    proj.cont[(nrow(proj.cont)+1):(nrow(proj.cont)+nrow(temp.project2)),] <- temp.project2
   }
 }
 

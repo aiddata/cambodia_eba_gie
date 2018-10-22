@@ -24,8 +24,7 @@ data.pull <- as.data.frame(matrix(NA, nrow = 0, ncol = 17))
 #it may be best to select a test i value and run through each of these functions on that example to understand the work flow
 for(i in 1:99) {
   #making all column classes character
-  temp <- mutate_all(data[[i]], as.character)
-  new.data <- temp
+  new.data <- mutate_all(data[[i]], as.character)
   
   #adding district data to all underlying rows
   new.data$district <- NA
