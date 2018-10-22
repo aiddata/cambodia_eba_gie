@@ -1,10 +1,11 @@
-
 library(readxl)
 library(stringr)
 
-pid <- read.csv("~/box sync/cambodia_eba_gie/PID/completed_pid/pid_merge.csv",stringsAsFactors = F)
+setwd("~/box sync/cambodia_eba_gie")
+
+pid <- read.csv("pid/completed_pid/pid_merge.csv",stringsAsFactors = F)
 pid <- pid[pid$actual.end.yr!=1908 | is.na(pid$actual.end.yr),]
-gazetteer <- as.data.frame(read_excel("~/GitHub/cambodia_eba_gie/inputData/National Gazetteer 2014.xlsx", 
+gazetteer <- as.data.frame(read_excel("inputdata/National Gazetteer 2014.xlsx", 
                                                         sheet = 4))
 pid <- merge(pid, gazetteer, by.x = "vill.id", by.y = "Id", all.x = T)
 
@@ -31,7 +32,7 @@ for(i in 1:nrow(pid)) {
 ###################
 
 pid$subsector <-
-  read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2012/ListSubSector.xlsx") %>%
+  read_excel("pid/pid_excel_2012/ListSubSector.xlsx") %>%
   merge(pid, ., by.x = "activity.type", by.y = "Name_EN", all.x = T) %>%
   .$Id
 
@@ -62,9 +63,8 @@ pid$bid.dummy <- ifelse(pid$n.bidders==0, 0, 1)
 ###################
 
 rm(list = setdiff(ls(), "pid"))
-cdb <- read_excel("~/Box Sync/cambodia_eba_gie/inputData/CDB_merged_final.xlsx")[,c("VillGis", "Year", "MAL_TOT", "FEM_TOT")]
-shape <- read.csv("~/box sync/cambodia_eba_gie/inputdata/village_grid_files/village_data.csv", 
-                  stringsAsFactors = F)
+cdb <- read_excel("inputdata/CDB_merged_final.xlsx")[,c("VillGis", "Year", "MAL_TOT", "FEM_TOT")]
+shape <- read.csv("inputdata/village_grid_files/village_data.csv", stringsAsFactors = F)
 
 sum(cdb$VillGis %in% shape$VILL_CODE)
 cdb <- merge(cdb, shape, by.x = "VillGis", by.y = "VILL_CODE")
@@ -109,9 +109,9 @@ data <- merge(cdb, pid, by.x = "VillGis", by.y = "vill.id")
 
 rm(list = setdiff(ls(), "data"))
 
-grid_1000_matched_data <- read.csv("~/box sync/cambodia_eba_gie/inputdata/village_grid_files/grid_1000_matched_data.csv",
+grid_1000_matched_data <- read.csv("inputdata/village_grid_files/grid_1000_matched_data.csv",
                                    stringsAsFactors = F)
-merge_grid_1000_lite <- read.csv("~/box sync/cambodia_eba_gie/inputdata/village_grid_files/merge_grid_1000_lite.csv",
+merge_grid_1000_lite <- read.csv("inputdata/village_grid_files/merge_grid_1000_lite.csv",
                                  stringsAsFactors = F)
 grid_1000_matched_data <- merge(grid_1000_matched_data, merge_grid_1000_lite, by = "cell_id")
 rm(merge_grid_1000_lite)
@@ -182,12 +182,10 @@ for(i in unique(data$VillGis)) {
   #   n.proj <- length(unique(temp2$contract.id))
   #   
   # }
-  cat(count, "of", length(unique(data$VillGis)))
-  
-  # if(count %% 100==0) {
-  #   #cat(count, "of", length(unique(data$VillGis)), "\n")
-  #   
-  # }
+
+  if(count %% 100==0) {
+    cat(count, "of", length(unique(data$VillGis)), "\n")
+  }
   count <- count+1
 }
 
@@ -196,21 +194,4 @@ proj.geo<- proj.geo[,!(names(proj.geo) %in% c("XCOOR", "YCOOR", "latitude", "lon
 
 names(proj.geo)[grepl("v4c", names(proj.geo))] <- paste0("ntl_", 1992:2013)
 
-write.csv(proj.geo, "~/Desktop/test_panel.csv", row.names = F)
-
-View(data[data$VillGis==3161501,])
-
-
-#proj.geo$trt <- ifelse(proj.geo$Year >= proj.geo$first.end.date, 1, 0)
-View(proj.geo[,c("Year", "first.end.date", "trt")])
-
-write.csv(proj.geo, "~/Desktop/test_panel.csv", row.names = F)
-
-
-which(duplicated(proj.geo$VillGis))
-View(proj.geo[proj.geo$VillGis=="1020106",])
-
-
-
-
-
+write.csv(proj.geo, "processeddata/pid_geo_merge.csv", row.names = F)

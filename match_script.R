@@ -1,10 +1,12 @@
 
+library(plyr)
 library(sf)
 library(readxl)
-library(plyr)
+
+setwd("~/box sync/cambodia_eba_gie")
 
 #reading gazetteer data in
-gazetteer.data <- as.data.frame(read_excel("~/GitHub/cambodia_eba_gie/inputData/National Gazetteer 2014.xlsx", 
+gazetteer.data <- as.data.frame(read_excel("inputdata/National Gazetteer 2014.xlsx", 
                                            sheet = 4))
 gazetteer.data$Id <- as.character(gazetteer.data$Id)
 gazetteer.data$Name_EN <- toupper(as.character(gazetteer.data$Name_EN))
@@ -22,7 +24,7 @@ for(i in 1:nrow(gazetteer.data)) {
 ###################
 
 #reading punwath data in
-punwath.data <- as.data.frame(st_read("~/Box Sync/cambodia_eba_gie/inputData/Cphum09-84-2016/Cphum09-84-2016.shp",
+punwath.data <- as.data.frame(st_read("inputdata/Cphum09-84-2016/Cphum09-84-2016.shp",
                                       stringsAsFactors = F))
 punwath.data$Code_Phum <- as.character(punwath.data$Code_Phum)
 punwath.data$Phum_Rom <- toupper(as.character(punwath.data$Phum_Rom))
@@ -30,7 +32,7 @@ punwath.data$Phum_Rom <- toupper(as.character(punwath.data$Phum_Rom))
 ###################
 
 #reading shape data in
-shape.data <- as.data.frame(st_read("~/GitHub/cambodia_eba_gie/inputData/census_2008_villages/Village.shp", 
+shape.data <- as.data.frame(st_read("inputdata/census_2008_villages/Village.shp", 
                                     stringsAsFactors = F))
 shape.data$VILL_CODE <- as.character(as.numeric(shape.data$VILL_CODE))
 shape.data$VILL_NAME <- toupper(as.character(shape.data$VILL_NAME))
@@ -148,17 +150,4 @@ full.data$long <- matrix(unlist(str_split(full.data$geo, ",")), ncol = 2, byrow 
 
 full.data <- full.data[!duplicated(full.data$vill_code),]
 write.csv(full.data[,c("vill_code", "vill_name", "province_name", "total_pop", "lat", "long")], 
-          "~/Desktop/shape_data.csv", row.names = F)
-
-
-aims <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/eba_province_panel.csv", stringsAsFactors = F)[,-1]
-aims$provinces[aims$provinces=="Siem Reap"] <- "Siemreap"
-
-panel <- merge(aims, full.data, by.x = "provinces", by.y = "province_name")
-
-
-
-
-
-
-
+          "processeddata/matched_shape_data.csv", row.names = F)
