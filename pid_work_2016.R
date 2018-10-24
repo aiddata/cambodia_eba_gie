@@ -1,4 +1,7 @@
 
+setwd("~/box sync/cambodia_eba_gie")
+options(scipen = 8)
+
 library(readxl)
 library(XML)
 library(dplyr)
@@ -15,11 +18,13 @@ library(stringr)
 # }
 
 #load the R list object including scraped pid data
-load("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2016/pid_2016_r_list.RData")
+load("PID/pid_excel_2016/pid_2016_r_list.RData")
 #object 92 is empty
 data=x[-92]
 #creating skeleton dataset to store all 2016 pid data
 data.pull <- as.data.frame(matrix(NA, nrow = 0, ncol = 17))
+
+test.vector <- NA
 
 #it may be best to select a test i value and run through each of these functions on that example to understand the work flow
 for(i in 1:99) {
@@ -52,9 +57,19 @@ for(i in 1:99) {
   new.data$activity <- NA
   activities <- new.data$Outputs[which(new.data$Commune != "")]
   new.data$cs.fund <- NA
-  cs.fund <- new.data$`C/S Fund`[which(new.data$Commune != "")]
+  cs.fund <- new.data$`Total Value`[which(new.data$Commune != "")]
   new.data$local.cont <- NA
-  local.cont <- new.data$`Local Contrib.`[which(new.data$Commune != "")]
+  local.cont <- new.data$`C/S Fund`[which(new.data$Commune != "")]
+  
+  #as a test, just pulling the raw local cont values from the data and testing the sum of these values
+  #against the sum of local cont values from the actual dataset produced by this loop. We expect the sums
+  #to be equivalent, indicating that the cs fund and local cont values have not been double counted
+  test.vector[i] <- 
+    new.data$`C/S Fund` %>%
+    gsub("R", "", .) %>%
+    gsub(",", "", .) %>%
+    as.numeric() %>%
+    sum(na.rm = T)
   
   for(k in 1:(length(comm.rows)-1)) {
     #adding commune, village, and activity data to each row
@@ -120,12 +135,14 @@ for(i in 1:99) {
     names(data.pull) <- names(new.data)
   }
 }
+sum(test.vector)
+sum(data.pull$local.cont)
 
 rm(list=setdiff(ls(), "data.pull"))
 
-pid2016 <- read_excel("~/Box Sync/cambodia_eba_gie/PID/PID2019-2016-new.xlsx")
+pid2016 <- read_excel("PID/PID2019-2016-new.xlsx")
 #had to read in the dates data separately, because R doesnt really allow you to pull in xlsx data with only some date columns
-pid2016.dates <- read_excel("~/Box Sync/cambodia_eba_gie/PID/PID2019-2016-new.xlsx", col_types = "date")
+pid2016.dates <- read_excel("PID/PID2019-2016-new.xlsx", col_types = "date")
 pid2016$ActualWorkCompletionOn <- pid2016.dates$ActualWorkCompletionOn
 pid2016$ActualWorkStartOn <- pid2016.dates$ActualWorkStartOn
 
@@ -176,8 +193,8 @@ pid2016 <- merge(pid2016, data.pull, by.x="Id", by.y="vill.id")
 
 #reading in gazetteer data to use as a reference. We want to merge pid data with gazetteer so we can get good 
 #village Ids
-gazetteer.vill <- as.data.frame(read_excel("~/GitHub/cambodia_eba_gie/inputData/National Gazetteer 2014.xlsx", sheet = 4))
-gazetteer.comm <- as.data.frame(read_excel("~/GitHub/cambodia_eba_gie/inputData/National Gazetteer 2014.xlsx", sheet = 3))
+gazetteer.vill <- as.data.frame(read_excel("inputdata/National Gazetteer 2014.xlsx", sheet = 4))
+gazetteer.comm <- as.data.frame(read_excel("inputdata/National Gazetteer 2014.xlsx", sheet = 3))
 gazetteer.vill$commid <- NA
 #retrieving gazetteer commune IDs from the first few characters of the village Ids
 for(i in 1:nrow(gazetteer.vill)) {
@@ -223,7 +240,7 @@ names(pid2016) <- c("project.id", "contract.id", "activity.type", "subsector",
 # 
 # apply(pid2016, 2, fun)
 
-write.csv(pid2016, "~/Box Sync/cambodia_eba_gie/PID/completed_pid/pid_2016.csv", row.names = F)
+write.csv(pid2016, "PID/completed_pid/pid_2016.csv", row.names = F)
 
 #these were the names (in order) of each province from the data I pulled so I kept these as reference
 # names <- c("Banteay Meanchey", "Battambang", "Kampong Cham", "Kampong Chhnang", "Kampong Speu", "Kampong Thom", "Kampot", 

@@ -5,12 +5,19 @@
 # spatio-temporal data measuring nighttime light of Cambodia from GeoQuery
 #------------------------------
 
+library(plyr)
 library(readxl)
 library(stringr)
 
 setwd("~/box sync/cambodia_eba_gie")
 
-pid <- read.csv("pid/completed_pid/pid_merge.csv",stringsAsFactors = F)
+pid2016 <- read.csv("pid/completed_pid/pid_2016.csv", stringsAsFactors = F)
+pid2012 <- read.csv("pid/completed_pid/pid_2012.csv", stringsAsFactors = F)
+pid2008 <- read.csv("pid/completed_pid/pid_2008.csv", stringsAsFactors = F)
+pid <- rbind.fill(pid2016, pid2012, pid2008)
+# write.csv(pid, "~/box sync/cambodia_eba_gie/PID/completed_pid/pid_merge.csv", row.names = F)
+# pid <- read.csv("pid/completed_pid/pid_merge.csv",stringsAsFactors = F)
+
 pid <- pid[pid$actual.end.yr!=1908 | is.na(pid$actual.end.yr),]
 gazetteer <- as.data.frame(read_excel("inputdata/National Gazetteer 2014.xlsx", 
                                                         sheet = 4))
@@ -156,11 +163,11 @@ for(i in unique(data$VillGis)) {
     #rows <- c(nrow(proj.geo)+1):(nrow(proj.geo)+length(unique(paste(temp$project.id, temp$contract.id))))
     rows <- c(nrow(proj.geo)+1):(nrow(proj.geo)+sum(grid))
     
-
+    
     #temp$TOTPOP[order(unique(temp$Year))]
     #may have to edit this further if the shorter vectors dont properly house in the df
     proj.geo[rows, ] <- c(temp[1, c(1:2, 140:175)],
-                          grid_1000_matched_data[rows, c(1:6, which(grepl("v4composites", names(grid_1000_matched_data))))])
+                          grid_1000_matched_data[grid, c(1:6, grep("v4composites", names(grid_1000_matched_data)))])
     
     proj.geo[rows, paste0("pop", sort(unique(temp$Year)))] <- temp$TOTPOP[order(unique(temp$Year))]
     
@@ -190,7 +197,7 @@ for(i in unique(data$VillGis)) {
   #   
   # }
 
-  if(count %% 100==0) {
+  if(count %% 1000==0) {
     cat(count, "of", length(unique(data$VillGis)), "\n")
   }
   count <- count+1
@@ -199,6 +206,6 @@ for(i in unique(data$VillGis)) {
 proj.geo<- proj.geo[,!(names(proj.geo) %in% c("XCOOR", "YCOOR", "latitude", "longitude", "ProvKH", "DistTypeKh", 
                                                "DistKh", "CommTypeKh", "Name_KH"))]
 
-names(proj.geo)[grepl("v4c", names(proj.geo))] <- paste0("ntl_", 1992:2013)
+names(proj.geo)[grepl("v4c", names(proj.geo))] <- paste0("ntl", 1992:2013)
 
 write.csv(proj.geo, "processeddata/pid_geo_merge.csv", row.names = F)
