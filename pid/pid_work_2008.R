@@ -1,10 +1,11 @@
-
 #-----------------------------
 # GIE of Cambodia Public Infrastructure and Local Governance Program
 # For SIDA / EBA
 # Compiling Project Information Database (from Cambodia) for 2003-2008
 # Will use project completion dates to create treatment info
 #------------------------------
+
+setwd("~/box sync/cambodia_eba_gie")
 
 library(readxl)
 library(stringr)
@@ -14,9 +15,9 @@ library(stringr)
 ## And add in additional information from other files from Cambodia Access database
 ###########################
 
-contract <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/Contract.xlsx")
+contract <- read_excel("pid/pid_excel_2008/Contract.xlsx")
 length(unique(contract$ContractID))
-progress <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/Progress.xlsx")
+progress <- read_excel("pid/pid_excel_2008/Progress.xlsx")
 
 #iterating through all unique contract IDs in the progress dataset to identify, for each unique ID, the last date a progress report was
 #submitted and the progress value assigned in that report
@@ -35,14 +36,14 @@ for(i in unique(progress$ContractID)) {
 }
 
 ## Identifying Project ID associated with Contract
-contract.output <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/ContractOutput.xlsx")
+contract.output <- read_excel("pid/pid_excel_2008/ContractOutput.xlsx")
 #remove duplicate observations from the contract.output dataset to identify project id for each contract
 contract.output <- contract.output[!duplicated(contract.output$ContractID),c("ContractID", "linkProjectID")]
 #merge "linkProjectID" into main contract dataset
 contract <- merge(contract, contract.output, by="ContractID")
 
 ## Adding changed/updated contract end dates from "amendment" file
-amendment <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/Amendment.xlsx")
+amendment <- read_excel("pid/pid_excel_2008/Amendment.xlsx")
 #check for duplicate contract ids
 length(unique(amendment$ContractID))
 
@@ -68,28 +69,28 @@ contract <- merge(contract, amendment, by="ContractID", all.x = T)
 
 ## Merging ancillary datasets with the project output dataset to get descriptive information
 
-output <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/Output.xlsx")
+output <- read_excel("pid/pid_excel_2008/Output.xlsx")
 #identify specific activities for contracts using Output ID
-project.output <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/ProjectOutput.xlsx")
+project.output <- read_excel("pid/pid_excel_2008/ProjectOutput.xlsx")
 sum(output$OutputID %in% project.output$OutputID)
 #merge sector info into project.output
 project.output <- merge(project.output, output, by.x="OutputID", by.y="OutputID")
 
 #identify and merge in output type info (e.g. new, repair) 
-output.type <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/OutputType.xlsx")
+output.type <- read_excel("pid/pid_excel_2008/OutputType.xlsx")
 sum(project.output$isNew %in% output.type$OPTypeID)
 project.output <- merge(project.output, output.type, by.x="isNew", by.y="OPTypeID")
 
 length(unique(paste(project.output$OutputID, project.output$ProjectID)))
 
 #identify project + order number activities, merge into project.output
-table3 <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/Table3.xlsx")
+table3 <- read_excel("pid/pid_excel_2008/Table3.xlsx")
 table3 <- table3[!duplicated(table3$OutputID),]
 sum(project.output$OutputID %in% table3$OutputID)
 project.output <- merge(project.output, table3, by.x="OutputID", by.y="OutputID")
 
 #identify sub-sector for each project + order number
-output.categories <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/OutputCategories.xlsx")
+output.categories <- read_excel("pid/pid_excel_2008/OutputCategories.xlsx")
 sum(project.output$CategoryID %in% output.categories$ID)
 project.output <- merge(project.output, output.categories, by.x="CategoryID", by.y="ID")
 
@@ -98,8 +99,8 @@ project.output <- merge(project.output, output.categories, by.x="CategoryID", by
 
 #get overall project sector info
 #Project dataset only has one row per project
-project <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/Project.xlsx")
-proj.type <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2008/ProjType.xlsx")
+project <- read_excel("pid/pid_excel_2008/Project.xlsx")
+proj.type <- read_excel("pid/pid_excel_2008/ProjType.xlsx")
 sum(project$ProjTypeID %in% proj.type$ProjTypeID)
 #merge in ProjTypeID classification, which gives overall project sector
 project <- merge(project, proj.type, by.x="ProjTypeID", by.y="ProjTypeID")
@@ -219,8 +220,4 @@ names(proj.cont) <- c("project.id", "contract.id", "activity.type",  "activity.t
                       "status", "n.bidders", "cs.fund", "local.cont", "vill.id")
 proj.cont$pid_id <- seq(100001, (100000+nrow(proj.cont)), 1)
 
-write.csv(proj.cont, "PID/completed_pid/pid_2008.csv", row.names = F)
-
-
-
-
+# write.csv(proj.cont, "pid/completed_pid/pid_2008.csv", row.names = F)

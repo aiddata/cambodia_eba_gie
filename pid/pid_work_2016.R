@@ -1,6 +1,11 @@
+#-----------------------------
+# GIE of Cambodia Public Infrastructure and Local Governance Program
+# For SIDA / EBA
+# Compiling Project Information Database (from Cambodia) for 2013-16
+# Will use project completion dates to create treatment info
+#------------------------------
 
 setwd("~/box sync/cambodia_eba_gie")
-options(scipen = 8)
 
 library(readxl)
 library(XML)
@@ -245,6 +250,7 @@ names(pid2016) <- c("project.id", "contract.id", "activity.type", "activity.type
                     "actual.end.yr", "actual.end.mo", "n.bidders", "cs.fund", "local.cont", "vill.id") 
 pid2016$pid_id <- seq(300001, (300000+nrow(pid2016)), 1)
 
+# write.csv(pid2016, "PID/completed_pid/pid_2016.csv", row.names = F)
 
 #not sure this project and contract ids are accurate
 #no activity description, last report, or progress
@@ -256,7 +262,6 @@ pid2016$pid_id <- seq(300001, (300000+nrow(pid2016)), 1)
 # 
 # apply(pid2016, 2, fun)
 
-write.csv(pid2016, "PID/completed_pid/pid_2016.csv", row.names = F)
 
 #these were the names (in order) of each province from the data I pulled so I kept these as reference
 # names <- c("Banteay Meanchey", "Battambang", "Kampong Cham", "Kampong Chhnang", "Kampong Speu", "Kampong Thom", "Kampot", 
