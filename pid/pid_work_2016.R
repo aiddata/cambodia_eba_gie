@@ -219,17 +219,33 @@ x <- merge(pid2016, gazetteer.full, by = "commvill")
 
 pid2016$village.id <- x$Id.y
 
+for(i in 1:nrow(pid2016)) {
+  pid2016$Outputs[i] <- strsplit(pid2016$Outputs[i], "\\[")[[1]][2]
+  pid2016$Outputs[i] <- trimws(strsplit(pid2016$Outputs[i], "\\]")[[1]][2])
+}
+# pid2016$Outputs <- gsub("0.4m diameter", "", pid2016$Outputs)
+# pid2016$Outputs <- gsub("0.6m diameter", "", pid2016$Outputs)
+# pid2016$Outputs <- gsub("0.8m diameter", "", pid2016$Outputs)
+# pid2016$Outputs <- gsub("1.0m diameter", "", pid2016$Outputs)
+
+# output.ids <- seq(1, length(unique(pid2016$Outputs)), 1)
+# output.ids <- cbind(output.ids, unique(pid2016$Outputs))
+# pid2016 <- merge(pid2016, output.ids, by.x="Outputs", by.y="V2")
+
 #only keeping necessary pid variables and renaming as necessary
 pid2016 <- pid2016[,c("Reference", "Id", "activity", 
-                      "SubSectorId", "isNew", "plannedstartyear", "plannedstartmonth",
+                      "SubSectorId", "Outputs", "isNew", "plannedstartyear", "plannedstartmonth",
                       "actualstartyear", "actualstartmonth", "plannedendyear", "plannedendmonth",
                       "actualendyear", "actualendmonth", "Bidders", "cs.fund", "local.cont",
                       "village.id")]
 
-names(pid2016) <- c("project.id", "contract.id", "activity.type", "subsector",
+names(pid2016) <- c("project.id", "contract.id", "activity.type", "activity.type.num", "activity.desc",
                     "new.repair", "planned.start.yr", "planned.start.mo",
                     "actual.start.yr", "actual.start.mo", "planned.end.yr", "planned.end.mo",
                     "actual.end.yr", "actual.end.mo", "n.bidders", "cs.fund", "local.cont", "vill.id") 
+pid2016$pid_id <- seq(300001, (300000+nrow(pid2016)), 1)
+
+
 #not sure this project and contract ids are accurate
 #no activity description, last report, or progress
 #generate bid dummy?

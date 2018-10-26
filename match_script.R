@@ -1,10 +1,17 @@
+#-----------------------------
+# GIE of Cambodia Public Infrastructure and Local Governance Program
+# For SIDA / EBA
+# Matching shape data provided by ODC and their GIS Analyst with administrative
+# data from the National Gazetteer
+# The resulting shape data (along with a Geoquery extract) will be merged with treatment data to create the panel
+#------------------------------
+
+setwd("~/box sync/cambodia_eba_gie")
 
 library(plyr)
 library(sf)
 library(readxl)
 library(stringr)
-
-setwd("~/box sync/cambodia_eba_gie")
 
 #reading gazetteer data in
 gazetteer.data <- as.data.frame(read_excel("inputdata/National Gazetteer 2014.xlsx", 
@@ -39,13 +46,6 @@ shape.data <- as.data.frame(st_read("inputdata/census_2008_villages/Village.shp"
 shape.data$VILL_CODE <- as.character(as.numeric(shape.data$VILL_CODE))
 shape.data$VILL_NAME <- toupper(as.character(shape.data$VILL_NAME))
 shape.data$unverified <- 0
-#some village codes include an extra 0 at the front of the number. I omit this zero to prevent incorrect mismatches
-# for(i in 1:nrow(shape.data)) {
-#   temp.id <- strsplit(shape.data[i, "VILL_CODE"], split = "")[[1]]
-#   if (temp.id[1]=="0") {
-#     shape.data[i, "VILL_CODE"] <- paste0(temp.id[2:length(temp.id)], collapse = "")
-#   }
-# }
 
 ###################
 
@@ -151,6 +151,6 @@ full.data$lat <- matrix(unlist(str_split(full.data$geo, ",")), ncol = 2, byrow =
 full.data$long <- matrix(unlist(str_split(full.data$geo, ",")), ncol = 2, byrow = T)[,2]
 
 full.data <- full.data[!duplicated(full.data$vill_code),]
-write.csv(full.data[,c("vill_code", "vill_name", "province_name", "total_pop", "unverified", "lat", "long")], 
-          "processeddata/matched_shape_data.csv", row.names = F)
+# write.csv(full.data[,c("vill_code", "vill_name", "province_name", "total_pop", "unverified", "lat", "long")],
+#           "processeddata/matched_shape_data.csv", row.names = F)
 

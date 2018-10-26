@@ -1,14 +1,21 @@
-library(readxl)
-library(RCurl)
+#-----------------------------
+# GIE of Cambodia Public Infrastructure and Local Governance Program
+# For SIDA / EBA
+# Merging Seila and AIMS pretreatment data with Gazetteer province data and
+# creating a pseudo-panel dataset of Seila/AIMS projects
+#------------------------------
 
 setwd("~/box sync/cambodia_eba_gie")
+
+library(readxl)
+library(RCurl)
 
 #pull in AIMS data
 aims <- read.csv("inputdata/pretreatment/aims.csv", stringsAsFactors = F)[,-1]
 #pull in Gazetteer data with province names and IDs
 province.data <- read_xlsx("inputdata/National Gazetteer 2014.xlsx")[4:5]
 #pull in Seila data
-seila <- read.csv("inputdata/pretreatment/seila.csv", stringsAsFactors = F)
+seila <- read.csv("inputdata/pretreatment/Seila.csv", stringsAsFactors = F)
 
 #no AIMS data for the Tboung Khmum province. Ensuring AIMS province names correspond exactly to Gazetteer province 
 #names for merging purposes
@@ -84,5 +91,4 @@ seila[1,"provinces"] <- "Siem Reap"
 province.data <- merge(province.data, seila, by="provinces", all = T)
 
 #exporting the province level panel dataset containing both the AIMS and Seila data into Box Sync
-# write.csv(province.data, "processedData/aims_seila_data.csv",
-#           row.names = F)
+#write.csv(province.data, "processedData/aims_seila_data.csv", row.names = F)
