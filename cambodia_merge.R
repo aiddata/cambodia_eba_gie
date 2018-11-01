@@ -131,6 +131,36 @@ data <- data[!is.na(data$actual.end.yr),]
 
 ###################
 
+#building stacked barplots of activity type by year by province
+
+for(i in unique(data$ProvEn)) {
+  temp <- data[which((data$ProvEn==i & !is.na(data$activity.type) & !is.na(data$actual.end.yr))),]
+  if(nrow(temp)>1) {
+    temp.mat <- as.data.frame(matrix(0, ncol = 11, nrow = 16))
+    a <- data[!duplicated(data[,c("activity.type", "activity.type.num")]), 
+                    c("activity.type", "activity.type.num")]
+    a <- a[!is.na(a$activity.type.num),]
+    names(temp.mat) <- a$activity.type[match(c(1:11), a$activity.type.num)]
+    row.names(temp.mat) <- c(2003:2018)
+    
+    for(j in unique(temp$actual.end.yr)) {
+      temp2 <- temp[which(temp$actual.end.yr==j),]
+      x <- table(temp2$activity.type.num)
+      temp.mat[(row.names(temp.mat)==j), as.numeric(names(x))] <- table(temp2$activity.type.num)
+    }
+    png(paste0("/Users/christianbaehr/Box Sync/cambodia_eba_gie/descriptive_stats/activity_plots/activity_", 
+               gsub(" ", "", i), ".png"))
+    barplot(t(as.matrix(temp.mat))[colSums(temp.mat)>0,], main = paste("Activity Type Distribution,", i),
+            xlab = "Year", ylab = "Number of Projects", 
+            col = which(colSums(temp.mat)>0)+5)
+    legend("topright", legend=row.names(t(as.matrix(temp.mat)))[colSums(temp.mat)>0], cex = 0.5, 
+           fill = which(colSums(temp.mat)>0)+5)
+    dev.off()
+  }
+}
+
+###################
+
 grid_1000_matched_data <- read.csv("inputdata/village_grid_files/grid_1000_matched_data.csv",
                                    stringsAsFactors = F)
 merge_grid_1000_lite <- read.csv("inputdata/village_grid_files/merge_grid_1000_lite.csv",
@@ -140,6 +170,29 @@ grid_1000_matched_data <- merge(grid_1000_matched_data, merge_grid_1000_lite, by
 ###################
 
 rm(list = setdiff(ls(), c("data", "cdb", "grid_1000_matched_data")))
+
+treatment <- as.data.frame(matrix(NA, nrow = 1, ncol = 21))[0,]
+names(treatment) <- c("VillGis", "ProvEn", "earliest.end.date", "earliest.sector.num", 
+                      "earliest.sector", paste0("count", 2003:2018))
+
+for(i in 1:length(unique(data$VillGis))) {
+  village <- unique(data$VillGis)[i]
+  temp <- data[which(data$VillGis==village),]
+  row <- nrow(treatment)+1
+  
+  treatment[row, c(1:5)] <- c(temp$VillGis[1],temp$ProvEn[1],
+                                       temp$actual.end.yr[which.min(temp$actual.end.yr)],
+                                       temp$activity.type.num[which.min(temp$actual.end.yr)],
+                                       temp$activity.type[which.min(temp$actual.end.yr)])
+  
+  for(j in sort(unique(data$actual.end.yr))) {
+    treatment[row, grep(j, names(treatment))] <- nrow(temp[temp$actual.end.yr==j,])
+  }
+}
+
+###################
+
+#mergin PID data with GeoQuery extract
 
 id.list <- list()
 id.list2 <- list()
@@ -157,187 +210,85 @@ for(i in 1:nrow(grid_1000_matched_data)) {
   }
 }
 
-trimmed.data <- data[,c(grep("VillGis", names(data)), (grep("latitude", 
-                                                            names(data)):length(names(data))))]
-trimmed.grid <- grid_1000_matched_data[,c(grep("cell_id", names(grid_1000_matched_data)), 
-                                          grep("v4composites", names(grid_1000_matched_data)))]
-stats.data <- cbind(trimmed.data[0,], trimmed.grid[0,])
+pre.panel <- as.data.frame(matrix(NA, nrow = nrow(grid_1000_matched_data), ncol = 261))
+names(pre.panel) <- c("VillGis", "ProvEn", as.vector(outer(c("box", "point"), 
+                                                 c("earliest.end.date", "earliest.sector.num", "earliest.sector", 
+                                                   paste0("count", 2003:2018)), paste, sep=".")), 
+                      names(grid_1000_matched_data))
 
-for(i in 1:nrow(trimmed.grid)) {
-  temp <- trimmed.data[(trimmed.data$VillGis %in% id.list2[[i]]),]
-  if(nrow(temp)>0) {
-    x<-((nrow(stats.data)+1):(nrow(stats.data)+nrow(temp)))
-    stats.data[x, (names(stats.data) %in% names(temp))] <- temp
-    
-    stats.data[x, (names(stats.data) %in% names(trimmed.grid))] <- trimmed.grid[i,]
+for(i in 1:length(unique(grid_1000_matched_data$cell_id))) {
+  temp.point <- treatment[which(treatment$VillGis %in% as.character(id.list[[i]])),]
+  temp.box <- treatment[which(treatment$VillGis %in% as.character(id.list2[[i]])),]
+  
+  if(nrow(temp.point) > 0) {
+    pre.panel[i, "VillGis"] <- temp.point$VillGis[which.min(temp.point$earliest.end.date)]
+    pre.panel[i, "ProvEn"] <- temp.point$ProvEn[which.min(temp.point$earliest.end.date)]
+    pre.panel[i, "point.earliest.end.date"] <- temp.point$earliest.end.date[which.min(temp.point$earliest.end.date)]
+    pre.panel[i, "point.earliest.sector.num"] <- temp.point$earliest.sector.num[which.min(temp.point$earliest.end.date)]
+    pre.panel[i, "point.earliest.sector"] <- temp.point$earliest.sector[which.min(temp.point$earliest.end.date)]
+    for(j in sort(unique(treatment$earliest.end.date))) {
+      pre.panel[i, grep(paste0("point.count", j), (names(pre.panel)))] <- sum(temp.point[, paste0("count", j)], na.rm = T)
+    }
   }
-  if(i %% 1000 == 0){cat(i, "of", nrow(trimmed.grid), "\n")}
+  if(nrow(temp.box) > 0) {
+    pre.panel[i, "VillGis"] <- temp.box$VillGis[which.min(temp.box$earliest.end.date)]
+    pre.panel[i, "ProvEn"] <- temp.box$ProvEn[which.min(temp.box$earliest.end.date)]
+    pre.panel[i, "box.earliest.end.date"] <- temp.box$earliest.end.date[which.min(temp.box$earliest.end.date)]
+    pre.panel[i, "box.earliest.sector.num"] <- temp.box$earliest.sector.num[which.min(temp.box$earliest.end.date)]
+    pre.panel[i, "box.earliest.sector"] <- temp.box$earliest.sector[which.min(temp.box$earliest.end.date)]
+    for(j in sort(unique(treatment$earliest.end.date))) {
+      pre.panel[i, grep(paste0("box.count", j), (names(pre.panel)))] <- sum(temp.box[, paste0("count", j)], na.rm = T)
+    }
+  }
+  pre.panel[i, which(names(pre.panel) %in% names(grid_1000_matched_data))] <- grid_1000_matched_data[i,]
+  
+  if(i %% 1000 == 0){cat(i, "of", nrow(grid_1000_matched_data), "\n")}
 }
 
 ###################
+
+# gazetteer <- read_excel("/Users/christianbaehr/Box Sync/cambodia_eba_gie/inputData/National Gazetteer 2014.xlsx", sheet=3)
+# pre.panel$commid <- NA
+# for(i in 1:nrow(pre.panel)) {
+#   pre.panel$commid[i] <- ifelse((nchar(pre.panel$VillGis[i])==7),
+#                                  paste0(unlist(strsplit(as.character(pre.panel$VillGis[i]), ""))[1:5], collapse = ""),
+#                                  paste0(unlist(strsplit(as.character(pre.panel$VillGis[i]), ""))[1:6], collapse = ""))
+# }
+# pre.panel <- merge(pre.panel, gazetteer[,(names(gazetteer) %in% c("Name_EN", "Id"))], by.x = "commid", by.y = "Id", all.x = T)
+# names(pre.panel)[names(pre.panel)=="Name_EN" ] <- "comm_name"
+#write.csv(pre.panel, "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/pre_panel.csv", row.names=F)
+pre.panel <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/pre_panel.csv", stringsAsFactors = F)
 
 #producing project count and ntl quantile statistic data frames by year/province
 
-for(i in unique(stats.data$ProvEn)) {
-  temp <- as.data.frame(apply(stats.data[stats.data$ProvEn==i, grep("v4composite", names(stats.data))], 2, as.numeric))
+for(i in unique(pre.panel$ProvEn)) {
+  temp <- as.data.frame(apply(pre.panel[which(pre.panel$ProvEn==i), grep("v4composite", names(pre.panel))], 2, as.numeric))
   
-  sum.stats <- as.data.frame(cbind(apply(temp, 2, mean, na.rm=T), t(apply(temp, 2, quantile, na.rm=T))))
-  row.names(sum.stats) <- gsub("v4composites_calibrated_201709.", "", row.names(sum.stats)) %>%
+  sum.stats <- as.data.frame(matrix(data=NA, ncol = 8, nrow = 27))
+  row.names(sum.stats) <- 1992:2018
+  colnames(sum.stats) <- c("count", "pct.count", "0%", "25%", "Mean", "Median", "75%", "100%")
+  
+  for(j in unique(pre.panel$point.earliest.end.date)[!is.na(unique(pre.panel$point.earliest.end.date))]) {
+    count <- nrow(pre.panel[which((pre.panel$ProvEn==i & pre.panel$point.earliest.end.date==j)),])
+    sum.stats[grep(j, row.names(sum.stats)), 1] <- count
+    sum.stats[grep(j, row.names(sum.stats)), 2] <- count/nrow(pre.panel[which(pre.panel$ProvEn==i & !is.na(pre.panel$point.earliest.end.date)),])
+  }
+  
+  x <- as.data.frame(cbind(apply(temp, 2, mean, na.rm=T), t(apply(temp, 2, quantile, na.rm=T))))
+  row.names(x) <-
+    gsub("v4composites_calibrated_201709.", "", row.names(x)) %>%
     gsub(".mean", "", .)
-  sum.stats$count <- NA
-
-  for(j in 1:length(unique(stats.data$actual.end.yr))) {
-    year <- unique(stats.data$actual.end.yr)[j]
-    count <- nrow(stats.data[(stats.data$ProvEn==i & stats.data$actual.end.yr==year),])
-    sum.stats$count[grep(year, row.names(sum.stats))] <- count
-  }
-  sum.stats2 <- sum.stats[,c("count", "0%", "25%", "V1", "50%", "75%", "100%")]
-  colnames(sum.stats2) <- c("count", "0%", "25%", "Mean", "Median", "75%", "100%")
-  assign(paste0("sum_stats_", i), sum.stats2)
-  #write.csv(sum.stats2, paste0("/Users/christianbaehr/desktop/sum_stats/", gsub(" ", "", i), ".csv"))
+  sum.stats[which(row.names(sum.stats) %in% row.names(x)),3:8] <- x[,c(2:3, 1, 4:6)]
+  
+  assign(paste0("sum_stats_", gsub(" ", "", i)), sum.stats)
+  # write.csv(sum.stats, paste0("/Users/christianbaehr/Box Sync/cambodia_eba_gie/descriptive_stats/summary_stats/", gsub(" ", "", i), ".csv"))
 }
 
-###################
+names(pre.panel) <- 
+  gsub("v4composites_calibrated_201709.", "ntl_", names(pre.panel)) %>%
+  gsub(".mean", "", .)
+pre.panel <- pre.panel[!is.na(pre.panel$VillGis),]
+panel <- reshape(data = pre.panel, direction = "long", varying = grep("ntl_", names(pre.panel)),
+                 idvar = "panel_id", sep = "_", timevar = "year")
 
-#producing stacked bar plots of activity type by year/province
-
-for(i in unique(stats.data$ProvEn)) {
-  temp <- stats.data[which((stats.data$ProvEn==i & !is.na(stats.data$activity.type) & !is.na(stats.data$actual.end.yr))),]
-  if(nrow(temp)>1) {
-    temp.mat <- as.data.frame(matrix(0, ncol = 11, nrow = 16))
-    a <- stats.data[!duplicated(stats.data[,c("activity.type", "activity.type.num")]), 
-                    c("activity.type", "activity.type.num")]
-    a <- a[!is.na(a$activity.type.num),]
-    names(temp.mat) <- a$activity.type[match(c(1:11), a$activity.type.num)]
-    row.names(temp.mat) <- c(2003:2018)
-    
-    for(j in unique(temp$actual.end.yr)) {
-      temp2 <- temp[which(temp$actual.end.yr==j),]
-      x <- table(temp2$activity.type.num)
-      temp.mat[(row.names(temp.mat)==j), as.numeric(names(x))] <- table(temp2$activity.type.num)
-    }
-    png(paste0("/Users/christianbaehr/desktop/activity_plots/activity_", gsub(" ", "", i), ".png"))
-    barplot(t(as.matrix(temp.mat))[colSums(temp.mat)>0,], main = paste("Activity Type Distribution,", i),
-            xlab = "Year", ylab = "Number of Projects", 
-            col = c(1:nrow(t(as.matrix(temp.mat)))))
-    legend("topright", legend=row.names(t(as.matrix(temp.mat)))[colSums(temp.mat)>0], cex = 0.5, 
-           fill = c(1:nrow(t(as.matrix(temp.mat)))))
-    dev.off()
-  }
-}
-
-###################
-
-
-#i=data$VillGis[82]
-#i=1020117
-#i=3161501
-
-# which(data$VillGis %in% grid_1000_matched_data$village_point_ids[24981])
-# data$VillGis[20533]
-# grid_1000_matched_data$village_point_ids[24981]
-# which(unique(data$VillGis)==data$VillGis[20533])
-# i=unique(data$VillGis)[6225]
-
-#data <- data[!duplicated(data[,!(names(data) %in% c("pid_id", "id"))])]
-# dups <- data[duplicated(data[,!(names(data) %in% c("pid_id", "id"))]),]
-
-# proj.geo <- cbind(data[1,c(grep("VillGis",names(data)),grep("TOTPOP",names(data)),grep("latitude",names(data)):length(names(data)))], 
-#                   grid_1000_matched_data[1,c(1:6,grep("v4composites", names(grid_1000_matched_data)))])
-# proj.geo[sort(paste0("pop", unique(cdb$Year)))] <- NA
-proj.geo <- proj.geo2 <- cbind(data[1,c(grep("VillGis",names(data)), grep("latitude",names(data)):length(names(data)))],
-                  grid_1000_matched_data[1, c(1:6,grep("v4composites", names(grid_1000_matched_data)))])
-proj.geo[paste0("trt.count", 2003:2018)] <- proj.geo[paste0("trt.cs.fund", 2003:2018)] <- 
-  proj.geo[paste0("trt.local.cont", 2003:2018)] <- proj.geo[c("cs.sum", "lc.sum")] <- NA
-proj.geo2 <- proj.geo <- proj.geo[0,]
-
-count <- 1
-for(i in unique(data$VillGis)) {
-  temp <- data[data$VillGis==i,]
-  #temp$id <- seq(1, nrow(temp), 1)
-  #cdbtemp <- cdb[cdb$VillGis==i,]
-  
-  grid <- unlist(lapply(id.list, function(x) i %in% x))
-  grid2 <- unlist(lapply(id.list2, function(x) i %in% x))
-  
-  if(sum(grid) > 0) {
-    rows <- c((nrow(proj.geo)+1):(nrow(proj.geo)+sum(grid)))
-
-    #may have to edit this further if the shorter vectors dont properly house in the df
-    proj.geo[rows, ] <- cbind(temp[, c(grep("VillGis",names(data)),grep("TOTPOP",names(data)),grep("latitude",names(data)):length(names(data)))],
-                          grid_1000_matched_data[grid, c(1:6, grep("v4composites", names(grid_1000_matched_data)))])
-      
-    proj.geo[rows, paste0("pop", sort(unique(cdbtemp$Year)))] <- cdbtemp$TOTPOP[order(unique(cdbtemp$Year))]
-    
-    if(length(temp$TOTPOP[order(unique(temp$Year))]) < 9) {
-      proj.geo[rows, paste0("pop", unique(data$Year)[!(unique(data$Year) %in% temp$Year)])] <- NA
-    }
-    proj.geo$first.end.date[rows] <- min(temp$actual.end.yr, na.rm = T)
-  }
-  
-  if(sum(grid2) > 0) {
-    rows2 <- c((nrow(proj.geo2)+1):(nrow(proj.geo2)+sum(grid2)))
-    
-    proj.geo2[rows2, c(grep("VillGis", names(proj.geo2)):
-                        grep("project.length", names(proj.geo2)))] <- temp[1,c(match(names(proj.geo2)[c(grep("VillGis", names(proj.geo2)):
-                                                                                                         grep("project.length", names(proj.geo2)))], names(temp)))]
-    
-    proj.geo2[rows2, c(grep("cell_id", names(proj.geo2)):
-                         grep("v4composites_calibrated_201709.2013.mean"))] <-
-      grid_1000_matched_data[rows2, match(names(proj.geo2)[c(grep("cell_id", names(proj.geo2)):grep("v4composites_calibrated_201709.2013.mean", names(proj.geo2)))],
-                                          names(grid_1000_matched_data))]
-    
-    proj.geo2[rows2, "cs.sum"] <- sum(temp$cs.fund)/sum(grid2)
-    proj.geo2[rows2, "lc.sum"] <- sum(temp$local.cont)/sum(grid2)
-    
-    for(j in 2003:2018) {
-      
-      proj.geo2[rows2, grep(paste0("trt.local.cont", j), names(proj.geo2))] <- temp$local.cont[temp$actual.end.yr==j]
-   
-    }
-  }
-  # if(sum(grid2) > 0) {
-  #   rows <- c(nrow(proj.geo2)+1)
-  #   temp2 <- proj.geo2[0,]
-  #   
-  #   temp2[rows, ] <- c(temp[1, c(1:2, 140:175)],
-  #                      grid_1000_matched_data[grid2, c(1:6, grep("v4composites", names(grid_1000_matched_data)))])
-  #   
-  #   temp2[rows, paste0("pop", sort(unique(temp$Year)))] <- temp$TOTPOP[order(unique(temp$Year))]
-  #   
-  #   if(length(temp$TOTPOP[order(unique(temp$Year))]) < 9) {
-  #     temp2[rows, paste0("pop", unique(data$Year)[!(unique(data$Year) %in% temp$Year)])] <- NA
-  #   }
-  #   proj.geo2[(nrow(proj.geo2)+1),] <- temp2[which.min(temp2$actual.end.yr),]
-  #   #proj.geo2$first.end.date[rows] <- min(temp$actual.end.yr, na.rm = T)
-  # }
-  if(count %% 1000==0) {cat(count, "of", length(unique(data$VillGis)), "\n")}
-  count <- count+1
-}
-
-proj.geo<- proj.geo[,!(names(proj.geo) %in% c("XCOOR", "YCOOR", "latitude", "longitude", "ProvKH", "DistTypeKh",
-                                              "DistKh", "CommTypeKh", "Name_KH"))]
-names(proj.geo)[grepl("v4c", names(proj.geo))] <- paste0("ntl", 1992:2013)
-
-# proj.geo <- reshape(data = proj.geo, varying = names(proj.geo)[c(grep("ntl", names(proj.geo)), grep("pop", names(proj.geo)))][17:28], 
-#                 direction = "long", idvar = "VillGis", sep = "")
-write.csv(proj.geo, "processeddata/pid_geo_merge.csv", row.names = F)
-
-# proj.geo3 <- proj.geo2[0,]
-# 
-# for(i in unique(proj.geo2$cell_id)) {
-#   temp <- proj.geo2[proj.geo2$cell_id==i,]
-#   proj.geo3[(nrow(proj.geo3)+1),] <- temp[which.min(temp$actual.end.yr)[1],]
-# }
-
-proj.geo2 <- proj.geo2[,!(names(proj.geo2) %in% c("XCOOR", "YCOOR", "latitude", "longitude", "ProvKH", "DistTypeKh", 
-                                                  "DistKh", "CommTypeKh", "Name_KH"))]
-names(proj.geo2)[grepl("v4c", names(proj.geo2))] <- paste0("ntl", 1992:2013)
-proj.geo2$cell.vill.id <- paste(proj.geo2$cell_id, proj.geo2$VillGis)
-proj.geo2$uniqueid <- seq(1, nrow(proj.geo2), 1)
-proj.geo2 <- reshape(data = proj.geo2, varying = names(proj.geo2)[c(grep("ntl", names(proj.geo2)), grep("pop", names(proj.geo2)))][17:28],
-                     direction = "long", idvar = "cell.vill.id", sep = "")
-
-write.csv(proj.geo2, "processeddata/pid_geo_merge2.csv", row.names = F)
-
-proj.geo$trt <- ifelse(proj.geo$time >= proj.geo$actual.end.yr, 1, 0)
+write.csv(panel, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel.csv", row.names = F)
