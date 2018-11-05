@@ -133,31 +133,84 @@ data <- data[!is.na(data$actual.end.yr),]
 
 #building stacked barplots of activity type by year by province
 
-for(i in unique(data$ProvEn)) {
-  temp <- data[which((data$ProvEn==i & !is.na(data$activity.type) & !is.na(data$actual.end.yr))),]
-  if(nrow(temp)>1) {
-    temp.mat <- as.data.frame(matrix(0, ncol = 11, nrow = 16))
-    a <- data[!duplicated(data[,c("activity.type", "activity.type.num")]), 
-                    c("activity.type", "activity.type.num")]
-    a <- a[!is.na(a$activity.type.num),]
-    names(temp.mat) <- a$activity.type[match(c(1:11), a$activity.type.num)]
-    row.names(temp.mat) <- c(2003:2018)
-    
-    for(j in unique(temp$actual.end.yr)) {
-      temp2 <- temp[which(temp$actual.end.yr==j),]
-      x <- table(temp2$activity.type.num)
-      temp.mat[(row.names(temp.mat)==j), as.numeric(names(x))] <- table(temp2$activity.type.num)
-    }
-    png(paste0("/Users/christianbaehr/Box Sync/cambodia_eba_gie/descriptive_stats/activity_plots/activity_", 
-               gsub(" ", "", i), ".png"))
-    barplot(t(as.matrix(temp.mat))[colSums(temp.mat)>0,], main = paste("Activity Type Distribution,", i),
-            xlab = "Year", ylab = "Number of Projects", 
-            col = which(colSums(temp.mat)>0)+5)
-    legend("topright", legend=row.names(t(as.matrix(temp.mat)))[colSums(temp.mat)>0], cex = 0.5, 
-           fill = which(colSums(temp.mat)>0)+5)
-    dev.off()
-  }
+# for(i in unique(data$ProvEn)) {
+#   temp <- data[which((data$ProvEn==i & !is.na(data$activity.type) & !is.na(data$actual.end.yr))),]
+#   if(nrow(temp)>1) {
+#     temp.mat <- as.data.frame(matrix(0, ncol = 11, nrow = 16))
+#     a <- data[!duplicated(data[,c("activity.type", "activity.type.num")]), 
+#                     c("activity.type", "activity.type.num")]
+#     a <- a[!is.na(a$activity.type.num),]
+#     names(temp.mat) <- a$activity.type[match(c(1:11), a$activity.type.num)]
+#     row.names(temp.mat) <- c(2003:2018)
+#     
+#     for(j in unique(temp$actual.end.yr)) {
+#       temp2 <- temp[which(temp$actual.end.yr==j),]
+#       x <- table(temp2$activity.type.num)
+#       temp.mat[(row.names(temp.mat)==j), as.numeric(names(x))] <- table(temp2$activity.type.num)
+#     }
+#     png(paste0("/Users/christianbaehr/Box Sync/cambodia_eba_gie/descriptive_stats/activity_plots/activity_", 
+#                gsub(" ", "", i), ".png"), width = 10, height = 7, res = 300, units = 'in')
+#     barplot(t(as.matrix(temp.mat))[colSums(temp.mat)>0,], main = paste("Activity Type Distribution,", i),
+#             xlab = "Year", ylab = "Number of Projects", 
+#             col = which(colSums(temp.mat)>0)+5)
+#     legend("topright", legend=row.names(t(as.matrix(temp.mat)))[colSums(temp.mat)>0], cex = 0.75, 
+#            fill = which(colSums(temp.mat)>0)+5)
+#     dev.off()
+#   }
+# }
+
+gazetteer <- read_excel("/Users/christianbaehr/Box Sync/cambodia_eba_gie/inputData/National Gazetteer 2014.xlsx", sheet=3)
+data$commid <- NA
+for(i in 1:nrow(data)) {
+  data$commid[i] <- ifelse((nchar(data$VillGis[i])==7),
+                                 paste0(unlist(strsplit(as.character(data$VillGis[i]), ""))[1:5], collapse = ""),
+                                 paste0(unlist(strsplit(as.character(data$VillGis[i]), ""))[1:6], collapse = ""))
 }
+data <- merge(data, gazetteer[,(names(gazetteer) %in% c("Name_EN", "Id"))], by.x = "commid", by.y = "Id", all.x = T)
+names(data)[names(data)=="Name_EN" ] <- "comm_name"
+
+###################
+
+# graph.data <- as.data.frame(matrix(data = NA, nrow = 10, ncol = 16))
+# names(graph.data) <- sort(unique(data$actual.end.yr))
+# row.names(graph.data) <- paste0(seq(10, 100, 10), "%_thres")
+# count=0
+# for(i in sort(unique(data$actual.end.yr))) {
+#   count=count+1
+#   for(threshold in seq(0.1, 1, 0.1)) {
+#     x <- rep(NA, length(unique(data$commid)))
+#     for(j in 1:length(unique(data$commid))) {
+#       temp <- data[(data$commid==unique(data$commid)[j]),]
+#       x[j] <- nrow(temp[temp$actual.end.yr<=i,])/nrow(temp) >= threshold
+#     }
+#     graph.data[paste0(threshold*100, "%_thres"), as.character(i)] <- sum(x)/length(x)
+#   }
+#   print(count)
+# }
+# write.csv(graph.data, "/Users/christianbaehr/Box Sync/cambodia_eba_gie/descriptive_stats/treatment_rates/treatment_rates.csv",
+#           row.names = F)
+# graph.data <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/descriptive_stats/treatment_rates/treatment_rates.csv",
+#                        stringsAsFactors = F)
+# for(i in 1:nrow(graph.data)) {
+#   if(i==1) {
+#     png("/Users/christianbaehr/Box Sync/cambodia_eba_gie/descriptive_stats/treatment_rates/treatment_rate_graph.png",
+#         width = 10, height = 7, res = 300, units = 'in')
+#     plot(as.numeric(graph.data[1,]), col = i, type = "b", axes = F, xlab = NA, ylab = NA)
+#   } else {
+#     points(as.numeric(graph.data[i,]), col = i, type = "b")
+#   }
+#   if(i==nrow(graph.data)) {
+#     axis(side = 1, at = c(1:ncol(graph.data)), labels = gsub("X", "", names(graph.data)), tick = T)
+#     axis(side = 2, at = c(1:nrow(graph.data)/10), labels = paste0(seq(10, 100, 10), "%"),
+#          tick = T)
+#     mtext(side = 1, "Year", line = 2)
+#     mtext(side = 2, "% communes with > X% treatment", line = 2)
+#     mtext(side = 3, "% treatment by year at commune level")
+#     legend("bottomright", legend = paste0(seq(10, 100, 10), "% thres"), fill = c(1:nrow(graph.data)),
+#            col = c(1:nrow(graph.data)), cex = 1)
+#     dev.off()
+#   }
+# }
 
 ###################
 
@@ -197,16 +250,23 @@ for(i in 1:length(unique(data$VillGis))) {
 id.list <- list()
 id.list2 <- list()
 for(i in 1:nrow(grid_1000_matched_data)) {
+  point <- as.character(as.numeric(unlist(strsplit(grid_1000_matched_data$village_point_ids[i], split = "\\|"))))
+  box <- as.character(as.numeric(unlist(strsplit(grid_1000_matched_data$village_box_ids[i], split = "\\|"))))
+  
   if(grid_1000_matched_data$village_point_ids[i]=="") {
     id.list[[i]] <- ""
   } else {
-    id.list[[i]] <- as.character(as.numeric(unlist(strsplit(grid_1000_matched_data$village_point_ids[i], split = "\\|"))))
+    id.list[[i]] <- point
   }
   
   if(grid_1000_matched_data$village_box_ids[i]=="") {
     id.list2[[i]] <- ""
   } else {
-    id.list2[[i]] <- as.character(as.numeric(unlist(strsplit(grid_1000_matched_data$village_box_ids[i], split = "\\|"))))
+    if(length(setdiff(box, point)) > 0) {
+      id.list2[[i]] <- setdiff(box, point)
+    } else {
+      id.list2[[i]] <- ""
+    }
   }
 }
 
@@ -226,8 +286,12 @@ for(i in 1:length(unique(grid_1000_matched_data$cell_id))) {
     pre.panel[i, "point.earliest.end.date"] <- temp.point$earliest.end.date[which.min(temp.point$earliest.end.date)]
     pre.panel[i, "point.earliest.sector.num"] <- temp.point$earliest.sector.num[which.min(temp.point$earliest.end.date)]
     pre.panel[i, "point.earliest.sector"] <- temp.point$earliest.sector[which.min(temp.point$earliest.end.date)]
+    
     for(j in sort(unique(treatment$earliest.end.date))) {
-      pre.panel[i, grep(paste0("point.count", j), (names(pre.panel)))] <- sum(temp.point[, paste0("count", j)], na.rm = T)
+      pre.panel[i, grep(paste0("point.count", j), (names(pre.panel)))] <- 
+        as.data.frame(temp.point[, paste0("count", c(2003:2018)[2003:2018<=j])]) %>%
+        apply(., 2, sum, na.rm=T) %>%
+        sum()
     }
   }
   if(nrow(temp.box) > 0) {
@@ -236,8 +300,12 @@ for(i in 1:length(unique(grid_1000_matched_data$cell_id))) {
     pre.panel[i, "box.earliest.end.date"] <- temp.box$earliest.end.date[which.min(temp.box$earliest.end.date)]
     pre.panel[i, "box.earliest.sector.num"] <- temp.box$earliest.sector.num[which.min(temp.box$earliest.end.date)]
     pre.panel[i, "box.earliest.sector"] <- temp.box$earliest.sector[which.min(temp.box$earliest.end.date)]
+    
     for(j in sort(unique(treatment$earliest.end.date))) {
-      pre.panel[i, grep(paste0("box.count", j), (names(pre.panel)))] <- sum(temp.box[, paste0("count", j)], na.rm = T)
+      pre.panel[i, grep(paste0("box.count", j), (names(pre.panel)))] <- 
+        as.data.frame(temp.box[, paste0("count", c(2003:2018)[2003:2018<=j])]) %>%
+        apply(., 2, sum, na.rm=T) %>%
+        sum()
     }
   }
   pre.panel[i, which(names(pre.panel) %in% names(grid_1000_matched_data))] <- grid_1000_matched_data[i,]
@@ -247,17 +315,18 @@ for(i in 1:length(unique(grid_1000_matched_data$cell_id))) {
 
 ###################
 
-# gazetteer <- read_excel("/Users/christianbaehr/Box Sync/cambodia_eba_gie/inputData/National Gazetteer 2014.xlsx", sheet=3)
-# pre.panel$commid <- NA
-# for(i in 1:nrow(pre.panel)) {
-#   pre.panel$commid[i] <- ifelse((nchar(pre.panel$VillGis[i])==7),
-#                                  paste0(unlist(strsplit(as.character(pre.panel$VillGis[i]), ""))[1:5], collapse = ""),
-#                                  paste0(unlist(strsplit(as.character(pre.panel$VillGis[i]), ""))[1:6], collapse = ""))
-# }
-# pre.panel <- merge(pre.panel, gazetteer[,(names(gazetteer) %in% c("Name_EN", "Id"))], by.x = "commid", by.y = "Id", all.x = T)
-# names(pre.panel)[names(pre.panel)=="Name_EN" ] <- "comm_name"
-#write.csv(pre.panel, "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/pre_panel.csv", row.names=F)
+# write.csv(pre.panel, "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/pre_panel.csv", row.names=F)
 pre.panel <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/pre_panel.csv", stringsAsFactors = F)
+
+gazetteer <- read_excel("/Users/christianbaehr/Box Sync/cambodia_eba_gie/inputData/National Gazetteer 2014.xlsx", sheet=3)
+pre.panel$commid <- NA
+for(i in 1:nrow(pre.panel)) {
+  pre.panel$commid[i] <- ifelse((nchar(pre.panel$VillGis[i])==7),
+                           paste0(unlist(strsplit(as.character(pre.panel$VillGis[i]), ""))[1:5], collapse = ""),
+                           paste0(unlist(strsplit(as.character(pre.panel$VillGis[i]), ""))[1:6], collapse = ""))
+}
+pre.panel <- merge(pre.panel, gazetteer[,(names(gazetteer) %in% c("Name_EN", "Id"))], by.x = "commid", by.y = "Id", all.x = T)
+names(pre.panel)[names(pre.panel)=="Name_EN" ] <- "comm_name"
 
 #producing project count and ntl quantile statistic data frames by year/province
 
@@ -290,5 +359,19 @@ names(pre.panel) <-
 pre.panel <- pre.panel[!is.na(pre.panel$VillGis),]
 panel <- reshape(data = pre.panel, direction = "long", varying = grep("ntl_", names(pre.panel)),
                  idvar = "panel_id", sep = "_", timevar = "year")
+# write.csv(panel, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel.csv", row.names = F)
 
-write.csv(panel, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel.csv", row.names = F)
+#standardizing ntl values
+pre.panel2 <- pre.panel
+pre.panel2[,grep("ntl_", names(pre.panel2))] <- apply(pre.panel2[,grep("ntl_", names(pre.panel2))], 2, function(x) {x/max(x)})
+panel2 <- reshape(data = pre.panel2, direction = "long", varying = grep("ntl_", names(pre.panel2)),
+                 idvar = "panel_id", sep = "_", timevar = "year")
+# write.csv(panel2, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel2.csv", row.names = F)
+
+plot(colMeans(pre.panel[,grep("ntl_", names(pre.panel))]), ylim = c(0,1))
+plot(colMeans(pre.panel2[,grep("ntl_", names(pre.panel2))]), ylim = c(0,1))
+
+
+
+
+
