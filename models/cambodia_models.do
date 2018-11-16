@@ -4,6 +4,11 @@ cd "/Users/christianbaehr/Box Sync/cambodia_eba_gie"
 
 insheet using "ProcessedData/panel.csv", clear
 
+replace boxenddatetype = "." if boxenddatetype == "NA"
+destring boxenddatetype, replace
+replace pointenddatetype = "." if pointenddatetype == "NA"
+destring pointenddatetype, replace
+
 * replacing year index with actual year
 replace year = year + 1991
 
@@ -47,110 +52,110 @@ gen ntl_standardized = ntl/ntl_yearmax
 
 *******************
 
-* NTL dummy dependent variable
-
 xtset cell_id year
+
+* NTL dummy dependent variable
 
 xtivreg2 ntl_dummy within_trt, fe cluster(communenumber year)
 est sto a1
 outreg2 using "Results/camb_models_dummy.doc", replace noni addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) ///
 	addnote("Notes: DV={0 if NTL=0, 1 otherwise}. 'within_trt' refers to the treatment variable that only considers villages within a cell. 'border_trt' refers to the treatment variable that only considers villages in the eight cells bordering a cell, but NOT within the cell itself.")
-
 xtivreg2 ntl_dummy within_trt border_trt, fe cluster(communenumber year)
 est sto a2
 outreg2 using "Results/camb_models_dummy.doc", append noni addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N)
-
 xi:xtivreg2 ntl_dummy within_trt border_trt i.year, fe cluster(communenumber year)
 est sto a3
 outreg2 using "Results/camb_models_dummy.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) ///
 	keep(within_trt border_trt)
-	
 reghdfe ntl_dummy within_trt border_trt i.year, cluster(communenumber year) absorb(cell_id)
 est sto a4
 outreg2 using "Results/camb_models_dummy.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", N) /// 
 	keep(within_trt border_trt)
-
-reghdfe ntl_dummy within_trt border_trt i.year i.provincenumber##c.year, cluster(communenumber year) absorb(cell_id)
+reghdfe ntl_dummy within_trt border_trt i.year c.year#i.provincenumber, cluster(communenumber year) absorb(cell_id)
 est sto a5
 outreg2 using "Results/camb_models_dummy.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) /// 
 	keep(within_trt border_trt)
+reghdfe ntl_dummy within_trt border_trt c.year#i.provincenumber, cluster(communenumber year) absorb(cell_id)
+est sto a6
+outreg2 using "Results/camb_models_dummy.doc", append noni addtext("Year FEs", N, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) /// 
+	keep(within_trt border_trt)
 
-*********
+* NTL binned dependent variable
 
 xtivreg2 ntl_binned within_trt, fe cluster(communenumber year)
 est sto b1
 outreg2 using "Results/camb_models_binned.doc", replace noni addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) ///
 	addnote("Notes: DV=NTL rounded down to the nearest 10. 'within_trt' refers to the treatment variable that only considers villages within a cell. 'border_trt' refers to the treatment variable that only considers villages in the eight cells bordering a cell, but NOT within the cell itself.")
-
 xtivreg2 ntl_binned within_trt border_trt, fe cluster(communenumber year)
 est sto b2
 outreg2 using "Results/camb_models_binned.doc", append noni addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N)
-
 xi:xtivreg2 ntl_binned within_trt border_trt i.year, fe cluster(communenumber year)
 est sto b3
 outreg2 using "Results/camb_models_binned.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) /// 
 	keep(within_trt border_trt)
-	
 reghdfe ntl_binned within_trt border_trt i.year, cluster(communenumber year) absorb(cell_id)
 est sto b4
 outreg2 using "Results/camb_models_binned.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", N) ///
 	keep(within_trt border_trt)
-
-reghdfe ntl_binned within_trt border_trt i.year i.provincenumber##c.year, cluster(communenumber year) absorb(cell_id)
+reghdfe ntl_binned within_trt border_trt i.year c.year#i.provincenumber, cluster(communenumber year) absorb(cell_id)
 est sto b5
 outreg2 using "Results/camb_models_binned.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) ///
 	keep(within_trt border_trt)
+reghdfe ntl_binned within_trt border_trt c.year#i.provincenumber, cluster(communenumber year) absorb(cell_id)
+est sto b6
+outreg2 using "Results/camb_models_binned.doc", append noni addtext("Year FEs", N, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) ///
+	keep(within_trt border_trt)
 
-*********
+* NTL continuous dependent variable
 
 xtivreg2 ntl within_trt, fe cluster(communenumber year)
 est sto c1
 outreg2 using "Results/camb_models_continuous.doc", replace noni addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) ///
 	addnote("Notes: DV=NTL. 'within_trt' refers to the treatment variable that only considers villages within a cell. 'border_trt' refers to the treatment variable that only considers villages in the eight cells bordering a cell, but NOT within the cell itself.")
-
 xtivreg2 ntl within_trt border_trt, fe cluster(communenumber year)
 est sto c2
 outreg2 using "Results/camb_models_continuous.doc", append noni addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N)
-
 xi:xtivreg2 ntl within_trt border_trt i.year, fe cluster(communenumber year)
 est sto c3
 outreg2 using "Results/camb_models_continuous.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) ///
 	keep(within_trt border_trt)
-	
 reghdfe ntl within_trt border_trt i.year, cluster(communenumber year) absorb(cell_id)
 est sto c4
 outreg2 using "Results/camb_models_continuous.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", N) ///
 	keep(within_trt border_trt)
-
-reghdfe ntl within_trt border_trt i.year i.provincenumber##c.year, cluster(communenumber year) absorb(cell_id)
+reghdfe ntl within_trt border_trt i.year c.year#i.provincenumber, cluster(communenumber year) absorb(cell_id)
 est sto c5
 outreg2 using "Results/camb_models_continuous.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) ///
 	keep(within_trt border_trt)
+reghdfe ntl within_trt border_trt c.year#i.provincenumber, cluster(communenumber year) absorb(cell_id)
+est sto c6
+outreg2 using "Results/camb_models_continuous.doc", append noni addtext("Year FEs", N, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) ///
+	keep(within_trt border_trt)
 
-*********
+* NTL standardized dependent variable
 
 xtivreg2 ntl_standardized within_trt, fe cluster(communenumber year)
 est sto d1
 outreg2 using "Results/camb_models_standardized.doc", replace noni addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) ///
 	addnote("Notes: DV=NTL_i/max(NTL_i) for year i. 'within_trt' refers to the treatment variable that only considers villages within a cell. 'border_trt' refers to the treatment variable that only considers villages in the eight cells bordering a cell, but NOT within the cell itself.")
-
 xtivreg2 ntl_standardized within_trt border_trt, fe cluster(communenumber year)
 est sto d2
 outreg2 using "Results/camb_models_standardized.doc", append noni addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N)
-
 xi:xtivreg2 ntl_standardized within_trt border_trt i.year, fe cluster(communenumber year)
 est sto d3
 outreg2 using "Results/camb_models_standardized.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) ///
 	keep(within_trt border_trt)
-	
 reghdfe ntl_standardized within_trt border_trt i.year, cluster(communenumber year) absorb(cell_id)
 est sto d4
 outreg2 using "Results/camb_models_standardized.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", N) ///
 	keep(within_trt border_trt)
-
-reghdfe ntl_standardized within_trt border_trt i.year i.provincenumber##c.year, cluster(communenumber year) absorb(cell_id)
+reghdfe ntl_standardized within_trt border_trt i.year c.year#i.provincenumber, cluster(communenumber year) absorb(cell_id)
 est sto d5
 outreg2 using "Results/camb_models_standardized.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) ///
+	keep(within_trt border_trt)
+reghdfe ntl_standardized within_trt border_trt c.year#i.provincenumber, cluster(communenumber year) absorb(cell_id)
+est sto d6
+outreg2 using "Results/camb_models_standardized.doc", append noni addtext("Year FEs", N, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) ///
 	keep(within_trt border_trt)
 
 *********
@@ -160,3 +165,5 @@ local txtfiles: dir . files "*.txt"
 foreach txt in `txtfiles' {
     erase `"`txt'"'
 }
+
+
