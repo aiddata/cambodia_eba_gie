@@ -18,11 +18,14 @@ pid2016 <- read.csv("pid/completed_pid/pid_2016.csv", stringsAsFactors = F)
 
 ###################
 
-village1 <- 14010913
-View(test.data[test.data$village.number==village1,])
+village1 <- test.data$village.code[1]
+View(test.data[test.data$village.code==village1,])
 
 grep(as.character(village1), grid_1000_matched_data$village_point_ids)
-View(grid_1000_matched_data[40028,])
+
+grep(as.character(village1), grid_1000_matched_data$village_box_ids)
+
+
 
 grep(as.character(village1), pid2008$vill.id)
 View(pid2008[c(12297,12300),])

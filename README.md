@@ -20,3 +20,5 @@
 `pid_2016_r_list.RData` - pulled from the Project Implementation Database website at http://db.ncdd.gov.kh/pid/reports/home/index.castle
 
 `village_grid_files (folder)` - extracted from GeoQuery by Seth and sent to cambodia_eba_gie Slack channel as a zip file
+
+`gadm36_KHM_4_sp.rds` - level 4 Cambodia admin. boundaries. Pulled from GADM website. This data is spatially joined with our villages data to ensure proper specification of village, commune, district, and province.

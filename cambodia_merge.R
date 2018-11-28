@@ -10,6 +10,7 @@ setwd("~/box sync/cambodia_eba_gie")
 library(plyr)
 library(dplyr)
 library(readxl)
+library(sf)
 library(stringr)
 library(sp)
 library(spatialEco)
@@ -41,7 +42,7 @@ library(spatialEco)
 pid <- read.csv("pid/completed_pid/pid_merge.csv",stringsAsFactors = F)
 pid <- pid[pid$actual.end.yr!=1908 | is.na(pid$actual.end.yr),]
 
-polygons <- readRDS("/Users/christianbaehr/Downloads/gadm36_KHM_4_sp.rds")
+polygons <- readRDS("inputdata/gadm36_KHM_4_sp.rds")
 shape <- as.data.frame(read.csv("inputdata/village_grid_files/village_data.csv", stringsAsFactors = F))
 spatial.data <- SpatialPointsDataFrame(coords = shape[,c("longitude", "latitude")], data = shape, 
                                        proj4string = CRS("+proj=longlat +datum=WGS84"))
