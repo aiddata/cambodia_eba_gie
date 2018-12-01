@@ -1,5 +1,7 @@
 
-panel <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel.csv", stringsAsFactors = F)
+setwd("~/box sync/cambodia_eba_gie")
+
+panel <- read.csv("ProcessedData/panel.csv", stringsAsFactors = F)
 
 test.data <- panel[sample(c(1:nrow(panel)), 5, replace = F),]
 View(test.data)
@@ -22,8 +24,17 @@ village1 <- test.data$village.code[1]
 View(test.data[test.data$village.code==village1,])
 
 grep(as.character(village1), grid_1000_matched_data$village_point_ids)
-
 grep(as.character(village1), grid_1000_matched_data$village_box_ids)
+View(grid_1000_matched_data[grep(as.character(village1), grid_1000_matched_data$village_box_ids),])
+
+grep(as.character(village1), pid2008$vill.id)
+grep(as.character(village1), pid2012$vill.id)
+grep(as.character(village1), pid2016$vill.id)
+View(pid2008[grep(as.character(village1), pid2008$vill.id),])
+
+
+
+
 
 
 
@@ -34,27 +45,12 @@ grep(as.character(village1), pid2012$vill.id)
 View(pid2012[c(1392, 1393),])
 
 grep(as.character(village1), pid2016$vill.id)
-View(pid2016[c(8590, 8591, 8592),])
+View(pid2016[grep(as.character(village1), pid2016$vill.id),])
 
 ###
 
 village2 <- 6011504
 View(test.data[test.data$village.number==village2,])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

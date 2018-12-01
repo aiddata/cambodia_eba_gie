@@ -1,7 +1,9 @@
 
 cd "/Users/christianbaehr/Box Sync/cambodia_eba_gie"
 
-insheet using "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/cdb_panel.csv", clear
+insheet using "ProcessedData/cdb_panel.csv", clear
+
+replace communename = "" if strpos(communename, "n.a") > 0
 
 replace year = year + 2007
 
@@ -28,6 +30,7 @@ destring pointenddatetype, replace
 encode provincename, gen(provincenumber)
 
 * replace communenumber = "." if communenumber == "NA"
+replace uniquecommunename = "" if strpos(uniquecommunename, "n.a") > 0
 encode uniquecommunename, gen(communenumber)
 
 * formatting missing data values for the treatment date variable

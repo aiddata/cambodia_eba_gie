@@ -4,6 +4,11 @@ cd "/Users/christianbaehr/Box Sync/cambodia_eba_gie"
 
 insheet using "ProcessedData/panel.csv", clear
 
+* dropping observations if the commune name variable contains NA values. Keeping these observations
+* creates problematic clusters when clustering errors at commune level
+
+replace communename = "" if strpos(communename, "n.a") > 0
+
 replace boxenddatetype = "." if boxenddatetype == "NA"
 destring boxenddatetype, replace
 replace pointenddatetype = "." if pointenddatetype == "NA"
@@ -12,6 +17,7 @@ destring pointenddatetype, replace
 * replacing year index with actual year
 replace year = year + 1991
 
+replace provincename = "" if provincename == "NA"
 encode provincename, gen(provincenumber)
 
 * generating a numeric variable representing communes for clustering SEs
@@ -19,6 +25,7 @@ drop cell_id
 rename panel_id cell_id
 
 * replace communenumber = "." if communenumber == "NA"
+replace uniquecommunename = "" if strpos(uniquecommunename, "n.a") > 0
 encode uniquecommunename, gen(communenumber)
 
 * formatting missing data values for the treatment date variable

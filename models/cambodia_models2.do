@@ -1,7 +1,7 @@
 
 * this script can only be run after running the first part of the cambodia_models.do file
 
-cd "/Users/christianbaehr/Box Sync/cambodia_eba_gie/Results/cambodia_models_new"
+cd "/Users/christianbaehr/Box Sync/cambodia_eba_gie/Results/cambodia_models_additional"
 
 * producing the correlation coefficient of the within cell treatment variable and border cell treatment variable
 corr within_trt border_trt

@@ -4,6 +4,8 @@ cd "/Users/christianbaehr/Box Sync/cambodia_eba_gie"
 
 insheet using "ProcessedData/panel_uncalibrated.csv", clear
 
+replace communename = "" if strpos(communename, "n.a") > 0
+
 replace boxenddatetype = "." if boxenddatetype == "NA"
 destring boxenddatetype, replace
 replace pointenddatetype = "." if pointenddatetype == "NA"
@@ -19,6 +21,7 @@ drop cell_id
 rename panel_id cell_id
 
 * replace communenumber = "." if communenumber == "NA"
+replace uniquecommunename = "" if strpos(uniquecommunename, "n.a") > 0
 encode uniquecommunename, gen(communenumber)
 
 * formatting missing data values for the treatment date variable

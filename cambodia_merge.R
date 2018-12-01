@@ -60,20 +60,20 @@ pid$project.length <- (((pid$actual.end.yr-pid$actual.start.yr)*12)+(pid$actual.
 pid$enddate.type <- NA
 for(i in 1:nrow(pid)) {
   if(is.na(pid$actual.end.yr[i])) {
-    if(is.na(pid$actual.start.yr[i]) & !is.na(pid$province.name[i])) {
+    if(is.na(pid$actual.start.yr[i])) {
       # determining the mean project length for projects in the the same province and year as i
-      temp <- mean(pid$project.length[(pid$planned.start.yr==pid$planned.start.yr[i] & pid$province.name==pid$province.name[i])], na.rm = T)
+      avg.length <- mean(pid$project.length[which(pid$planned.start.yr==pid$planned.start.yr[i] & pid$province.name==pid$province.name[i])], na.rm = T)
       # for cases where the actual start date is missing, we use the planned start date as the reference point
       # for estimating actual end date
-      pid$actual.end.yr[i] <- pid$planned.start.yr[i] + floor((pid$planned.start.mo[i]+temp)/12)
-      pid$actual.end.mo[i] <- round(((pid$planned.start.mo[i]+temp) %% 12), digits = 0)
+      pid$actual.end.yr[i] <- pid$planned.start.yr[i] + floor((pid$planned.start.mo[i]+avg.length)/12)
+      pid$actual.end.mo[i] <- round(((pid$planned.start.mo[i]+avg.length) %% 12), digits = 0)
       # assigning end date estimation codes for robustness checks
       pid$enddate.type[i] <- 2
-    } else if (!is.na(pid$actual.start.yr[i]) & !is.na(pid$province.name[i])) {
-      temp <- mean(pid$project.length[(pid$actual.start.yr==pid$actual.start.yr[i] & pid$province.name==pid$province.name[i])], na.rm = T)
+    } else if (!is.na(pid$actual.start.yr[i])) {
+      avg.length <- mean(pid$project.length[which(pid$actual.start.yr==pid$actual.start.yr[i] & pid$province.name==pid$province.name[i])], na.rm = T)
       # expected end date is estimated based on mean project length and the actual start date value
-      pid$actual.end.yr[i] <- pid$actual.start.yr[i] + floor((pid$actual.start.mo[i]+temp)/12)
-      pid$actual.end.mo[i] <- round(((pid$actual.start.mo[i]+temp) %% 12), digits = 0)
+      pid$actual.end.yr[i] <- pid$actual.start.yr[i] + floor((pid$actual.start.mo[i]+avg.length)/12)
+      pid$actual.end.mo[i] <- round(((pid$actual.start.mo[i]+avg.length) %% 12), digits = 0)
       pid$enddate.type[i] <- 1
     } else {pid$enddate.type[i] <- 0}
   } else {pid$enddate.type[i] <- 0}
@@ -222,6 +222,8 @@ for(i in 1:length(unique(pid$village.code))) {
     treatment[row, grep(paste0("count", j), names(treatment))] <- nrow(temp[temp$actual.end.yr==j,])
   }
 }
+# write.csv(treatment, "ProcessedData/treatment.csv", row.names=F)
+treatment <- read.csv("ProcessedData/treatment.csv", stringsAsFactors = F)
 
 ###################
 
@@ -231,6 +233,7 @@ grid_1000_matched_data <- read.csv("inputdata/village_grid_files/grid_1000_match
 merge_grid_1000_lite <- read.csv("inputdata/village_grid_files/merge_grid_1000_lite.csv",
                                  stringsAsFactors = F)
 grid_1000_matched_data <- merge(grid_1000_matched_data, merge_grid_1000_lite, by = "cell_id")
+grid_1000_matched_data <- grid_1000_matched_data[,-c(7:49, 72:221)]
 
 #merging PID data with GeoQuery extract
 id.list <- list()
@@ -261,10 +264,12 @@ for(i in 1:nrow(grid_1000_matched_data)) {
 }
 
 # creating a skeleton dataset to store the merged PID/shape and grid cell data
-pre.panel <- as.data.frame(matrix(NA, nrow = nrow(grid_1000_matched_data), ncol = 264))
-names(pre.panel) <- c("village.code", "village.name", "province.name", "district.name", "commune.name", 
+pre.panel.names <- c("village.code", "village.name", "province.name", "district.name", "commune.name", 
                       as.vector(outer(c("box", "point"), c("earliest.end.date", "enddate.type", "earliest.sector.num", "earliest.sector", 
-                                                           paste0("count", 2003:2017)), paste, sep=".")), names(grid_1000_matched_data))
+                                                           paste0("count", 1992:2017)), paste, sep=".")), names(grid_1000_matched_data))
+
+pre.panel <- as.data.frame(matrix(NA, nrow = nrow(grid_1000_matched_data), ncol = length(pre.panel.names)))
+names(pre.panel) <- pre.panel.names
 
 # in the "pre.panel" data, there will be one observation per grid cell
 for(i in 1:length(unique(grid_1000_matched_data$cell_id))) {
@@ -334,8 +339,11 @@ for(i in grep("count", names(pre.panel))) {pre.panel[which(is.na(pre.panel[,i]))
 
 pre.panel$unique.commune.name <- paste(pre.panel$province.name, pre.panel$district.name, pre.panel$commune.name)
 
-# write.csv(pre.panel, "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/pre_panel.csv", row.names=F)
-pre.panel <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/pre_panel.csv", stringsAsFactors = F)
+# editing variable names to make data reshaping easier
+names(pre.panel) <- gsub("v4composites_calibrated_201709.", "ntl_", names(pre.panel)) %>% gsub(".mean", "", .)
+
+# write.csv(pre.panel, "ProcessedData/pre_panel.csv", row.names=F)
+pre.panel <- read.csv("ProcessedData/pre_panel.csv", stringsAsFactors = F)
 
 ###################
 
@@ -365,37 +373,20 @@ pre.panel <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/Processed
 
 ###################
 
-# editing variable names to make data reshaping easier
-names(pre.panel) <- gsub("v4composites_calibrated_201709.", "ntl_", names(pre.panel)) %>% gsub(".mean", "", .)
-
 # reshaping cross sectional data into a panel structure with time dimension being years 1992:2013 and the panel variable being
 # cell id
-panel <- reshape(data = pre.panel, direction = "long", varying = list(paste0("ntl_", 1992:2013)),
+panel <- reshape(data = pre.panel, direction = "long", varying = list(paste0("ntl_", 1992:2013), 
+                                                                      paste0("point.count", 1992:2013),
+                                                                      paste0("box.count", 1992:2013)),
                  idvar = "panel_id", sep = "_", timevar = "year")
 names(panel)[names(panel)=="ntl_1992"] <- "ntl"
+names(panel)[names(panel)=="point.count1992"] <- "point.count"
+names(panel)[names(panel)=="box.count1992"] <- "box.count"
 
-panel <- panel[,!(grepl("ltdr", names(panel)) | grepl("udel", names(panel)))]
+
+panel <- panel[, !(names(panel) %in% c(paste0("point.count", 2014:2017), paste0("box.count", 2014:2017)))]
 # write.csv(panel, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel.csv", row.names = F)
 # panel <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel.csv", stringsAsFactors = F)
-
-###################
-
-pre.panel2 <- pre.panel
-pre.panel2[c(paste0("box.count", 1992:2002), paste0("point.count", 1992:2002))] <- 0
-
-panel2 <- reshape(data = pre.panel2, direction = "long", varying = list(paste0("ntl_", 1992:2013),
-                                                                                paste0("box.count", 1992:2013),
-                                                                                paste0("point.count", 1992:2013)),
-                           idvar = "panel_id", sep = "_", timevar = "year")
-
-names(panel2)[names(panel2)=="ntl_1992"] <- "ntl"
-names(panel2)[names(panel2)=="box.count1992"] <- "box.count"
-names(panel2)[names(panel2)=="point.count1992"] <- "point.count"
-
-panel2 <- panel2[,!(grepl("ltdr", names(panel2)) | grepl("udel", names(panel2)))]
-
-# write.csv(panel2, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel2.csv", row.names = F)
-panel2 <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel2.csv", stringsAsFactors = F)
 
 ###################
 
