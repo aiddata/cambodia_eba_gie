@@ -14,6 +14,7 @@ library(sf)
 library(stringr)
 library(sp)
 library(spatialEco)
+library(rlist)
 
 # the commented out code merges the three PID datasets and assigns a common Activity Type index to the PID data
 # it then writes out a complete PID dataset that can be read in instead of re-running this code each time
@@ -107,6 +108,9 @@ sum(pid$local.cont>1e+7, na.rm = T)
 # creating a dummy variable denoting whether there was competitive bidding for a contract based
 # on the number of bidders variable
 pid$bid.dummy <- ifelse(pid$n.bidders==0, 0, 1)
+
+# write.csv(pid, "ProcessedData/pid.csv", row.names = F)
+# pid <- read.csv("ProcessedData/pid.csv", stringsAsFactors = F)
 
 ###################
 
@@ -222,8 +226,6 @@ for(i in 1:length(unique(pid$village.code))) {
     treatment[row, grep(paste0("count", j), names(treatment))] <- nrow(temp[temp$actual.end.yr==j,])
   }
 }
-# write.csv(treatment, "ProcessedData/treatment.csv", row.names=F)
-treatment <- read.csv("ProcessedData/treatment.csv", stringsAsFactors = F)
 
 ###################
 
@@ -373,6 +375,41 @@ pre.panel <- read.csv("ProcessedData/pre_panel.csv", stringsAsFactors = F)
 
 ###################
 
+cdb <- read.csv("InputData/CDB_merged_final.csv", stringsAsFactors = F)
+cdb <- cdb[,c("VillGis", "Year", "MAL_TOT", "FEM_TOT", "KM_ROAD", "HRS_ROAD", "KM_P_SCH", "Baby_die_Midw", "Baby_die_TBA", 
+              "THATCH_R", "Zin_Fibr_R", "TILE_R", "Flat_R_Mult", "Flat_R_One", "Villa_R", "THAT_R_Elec", "Z_Fib_R_Elec", 
+              "Til_R_Elec", "Flat_Mult_Elec", "Flat_One_Elec", "Villa_R_Elec", "Fish_ro_boat", "Trav_ro_boat", "Fish_Mo_boat",
+              "Trav_Mo_boat", "M_boat_les1T", "M_boat_ov1T", "Family_Car", "BICY_NUM", "Cow_Num", "Hors_NUM", "PIG_FAMI", 
+              "Goat_fami", "Chick_fami", "Duck_fami", "THAT_R_TV", "Z_Fib_R_TV", "Til_R_TV", "Flat_Mult_TV", "Flat_One_TV", 
+              "Villa_R_TV")]
+
+names <- c("MAL_TOT", "FEM_TOT", "KM_ROAD", "HRS_ROAD", "KM_P_SCH", "Baby_die_Midw", "Baby_die_TBA", 
+           "THATCH_R", "Zin_Fibr_R", "TILE_R", "Flat_R_Mult", "Flat_R_One", "Villa_R", "THAT_R_Elec", "Z_Fib_R_Elec", 
+           "Til_R_Elec", "Flat_Mult_Elec", "Flat_One_Elec", "Villa_R_Elec", "Fish_ro_boat", "Trav_ro_boat", "Fish_Mo_boat",
+           "Trav_Mo_boat", "M_boat_les1T", "M_boat_ov1T", "Family_Car", "BICY_NUM", "Cow_Num", "Hors_NUM", "PIG_FAMI", 
+           "Goat_fami", "Chick_fami", "Duck_fami", "THAT_R_TV", "Z_Fib_R_TV", "Til_R_TV", "Flat_Mult_TV", "Flat_One_TV", 
+           "Villa_R_TV")
+panel.names <- list()
+for(i in names) {panel.names[[length(panel.names)+1]] <- paste0(i, ".", 1992:2013)}
+
+cdb <- reshape(data = cdb, direction = "wide", v.names = names, timevar = "Year", idvar = "VillGis")
+
+cdb[apply(expand.grid(names, ".", 1992:2007), 1, paste, collapse="")] <- NA
+ 
+sum(pre.panel$village.code %in% cdb$VillGis)
+cdb.pre.panel <- merge(pre.panel, cdb, by.x = "village.code", by.y = "VillGis", all.x = T)
+
+panel.names <- list.append(panel.names, paste0("ntl_", 1992:2013), paste0("point.count", 1992:2013), paste0("box.count", 1992:2013))
+
+cdb.panel <- reshape(data = cdb.pre.panel, direction = "long", varying = panel.names,
+                     idvar = "panel_id", timevar = "year")
+
+cdb.panel <- cdb.panel[,!(grepl(paste0(c(2014:2017, "NA"), collapse = "|"), names(cdb.panel)))]
+
+names(cdb.panel) <- gsub("\\.1992|\\_1992|1992", "", names(cdb.panel))
+
+# write.csv(cdb.panel, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/cdb_panel.csv", row.names = F)
+
 # reshaping cross sectional data into a panel structure with time dimension being years 1992:2013 and the panel variable being
 # cell id
 panel <- reshape(data = pre.panel, direction = "long", varying = list(paste0("ntl_", 1992:2013), 
@@ -414,41 +451,6 @@ names(panel.uncalibrated)[names(panel.uncalibrated)=="ntl_1992"] <- "ntl"
 
 panel.uncalibrated <- panel.uncalibrated[,!(grepl("ltdr", names(panel.uncalibrated)) | grepl("udel", names(panel.uncalibrated)))]
 # write.csv(panel.uncalibrated, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel_uncalibrated.csv", row.names = F)
-
-###################
-
-cdb <- as.data.frame(read_excel("inputdata/CDB_merged_final.xlsx"))
-cdb <- cdb[,c("VillGis", "Year", "MAL_TOT", "FEM_TOT", "KM_ROAD", "HRS_ROAD", "KM_P_SCH", "Baby_die_Midw", "Baby_die_TBA", 
-              "THATCH_R", "Zin_Fibr_R", "TILE_R", "Flat_R_Mult", "Flat_R_One", "Villa_R", "THAT_R_Elec", "Z_Fib_R_Elec", 
-              "Til_R_Elec", "Flat_Mult_Elec", "Flat_One_Elec", "Villa_R_Elec")]
-cdb <- cdb[!is.na(cdb$Year),]
-
-for(i in unique(cdb$VillGis)) {
-  temp <- cdb[cdb$VillGis==i,]
-  if(length(temp$Year) != length(unique(cdb$Year))) {
-    cdb <- cdb[!(cdb$VillGis==i),]
-  }
-}
-cdb <- reshape(cdb, idvar = "VillGis", timevar = "Year", direction = "wide")
-
-cdb.pre.panel <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/pre_panel.csv", stringsAsFactors = F)
-
-sum(cdb.pre.panel$village.code %in% cdb$VillGis)
-cdb.pre.panel <- merge(cdb.pre.panel, cdb, by.x = "village.code", by.y = "VillGis", all.x = T)
-
-cdb.pre.panel <- cdb.pre.panel[,c(1:47, 265:436)]
-names <- c("MAL_TOT", "FEM_TOT", "KM_ROAD", "HRS_ROAD", "KM_P_SCH", "Baby_die_Midw", "Baby_die_TBA", 
-           "THATCH_R", "Zin_Fibr_R", "TILE_R", "Flat_R_Mult", "Flat_R_One", "Villa_R", "THAT_R_Elec", "Z_Fib_R_Elec", 
-           "Til_R_Elec", "Flat_Mult_Elec", "Flat_One_Elec", "Villa_R_Elec")
-panel.names <- list()
-for(i in names) {panel.names[[length(panel.names)+1]] <- paste0(i, ".", 2008:2016)}
-
-cdb.panel <- reshape(data = cdb.pre.panel, direction = "long", varying = panel.names,
-                  idvar = "cell_id", timevar = "year")
-
-names(cdb.panel) <- gsub(".2008", "", names(cdb.panel))
-
-# write.csv(cdb.panel, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/cdb_panel.csv", row.names = F)
 
 
 
