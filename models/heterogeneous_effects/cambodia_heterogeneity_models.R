@@ -1,12 +1,13 @@
-#########
 
 # designate the activity type for subsetting the PID data here. The string you pass to the activity.type object must
 # match with one of the values of the activity type variable in the PID data
 # for the output.file.name variable, input the desired name of the .csv file containing the heterogeneous effects panel dataset
-activity.type <- c("Urban transport")
-output.file.name <- "urban_transport_only"
+activity.type <- c("Rural Domestic Water Supplies")
+output.file.name <- "panel_rural-domestic-water_only"
 
-#########
+# once the correct activity type and output file names have been assigned, you can run the rest of the script
+
+###################
 
 setwd("~/box sync/cambodia_eba_gie")
 
@@ -19,7 +20,7 @@ library(sp)
 library(spatialEco)
 
 pid <- read.csv("ProcessedData/pid.csv", stringsAsFactors = F)
-pre.treatment <- pid[pid$activity.type %in% activity.type,]
+pre.treatment <- pid[which(pid$activity.type %in% activity.type),]
 
 # reading in and merging data from the GeoQuery extract
 grid_1000_matched_data <- read.csv("inputdata/village_grid_files/grid_1000_matched_data.csv", stringsAsFactors = F)
@@ -132,21 +133,28 @@ panel <- reshape(data = pre.panel, direction = "long", varying = list(paste0("nt
                                                                       paste0("point.count", 1992:2013),
                                                                       paste0("box.count", 1992:2013)),
                  idvar = "panel_id", sep = "_", timevar = "year")
+
+names(panel)[names(panel)=="village.code"] <- "village_code"
+names(panel)[names(panel)=="village.name"] <- "village_name"
+names(panel)[names(panel)=="province.name"] <- "province_name"
+names(panel)[names(panel)=="district.name"] <- "district_name"
+names(panel)[names(panel)=="commune.name"] <- "commune_name"
+names(panel)[names(panel)=="box.earliest.end.date"] <- "border_cell_earliest_enddate"
+names(panel)[names(panel)=="point.earliest.end.date"] <- "intra_cell_earliest_enddate"
+names(panel)[names(panel)=="box.enddate.type"] <- "border_cell_enddate_type"
+names(panel)[names(panel)=="point.enddate.type"] <- "intra_cell_enddate_type"
+names(panel)[names(panel)=="box.earliest.sector.num"] <- "border_cell_earliest_sector_num"
+names(panel)[names(panel)=="point.earliest.sector.num"] <- "intra_cell_earliest_sector_num"
+names(panel)[names(panel)=="box.earliest.sector"] <- "border_cell_earliest_sector"
+names(panel)[names(panel)=="point.earliest.sector"] <- "intra_cell_earliest_sector"
+names(panel)[names(panel)=="unique.commune.name"] <- "unique_commune_name"
 names(panel)[names(panel)=="ntl_1992"] <- "ntl"
-names(panel)[names(panel)=="point.count1992"] <- "point.count"
-names(panel)[names(panel)=="box.count1992"] <- "box.count"
+names(panel)[names(panel)=="point.count1992"] <- "intra_cell_count"
+names(panel)[names(panel)=="box.count1992"] <- "border_cell_count"
+names(panel)[names(panel)=="ntl_1992_uncalibrated"] <- "ntl_uncalibrated"
 
-panel <- panel[, !(names(panel) %in% c(paste0("point.count", 2014:2017), paste0("box.count", 2014:2017)))]
+panel <- panel[, !(names(panel) %in% c(paste0("point.count", 2014:2017), paste0("box.count", 2014:2017), "dist_to_water.na", 
+                                       "dist_to_groads.na", "id", "panel_id", "village_box_ids", "village_point_ids"))]
 
-write.csv(panel, paste0("ProcessedData/heterogeneous_effects/panel_", output.file.name,".csv"), row.names=F)
-
-plot(apply(pre.panel[,grep("box.count", names(pre.panel))], 2, sum))
-plot(apply(pre.panel[,grep("point.count", names(pre.panel))], 2, sum))
-
-
-
-
-
-
-
+write.csv(panel, paste0("ProcessedData/heterogeneous_effects/", output.file.name,".csv"), row.names=F)
 

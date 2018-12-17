@@ -17,21 +17,21 @@ pid2008 <- read.csv("PID/completed_pid/pid_2008.csv", stringsAsFactors = F)
 pid2012 <- read.csv("PID/completed_pid/pid_2012.csv", stringsAsFactors = F)
 pid2016 <- read.csv("PID/completed_pid/pid_2016.csv", stringsAsFactors = F)
 test2008 <- NULL
-for(i in unique(pid2008$vill.id)) {
-  temp <- pid2008[pid2008$vill.id==i,]
-  if(length(unique(temp$project.id))!=1) {test2008[length(test2008)+1] <- T} 
+for(i in pid2008$project.id) {
+  temp <- pid2008[pid2008$project.id==i,]
+  if(length(unique(temp$vill.id)) >1) {test2008[length(test2008)+1] <- T} 
   else {test2008[length(test2008)+1] <- F}}
 pid2008.sub <- pid2008[which(test2008),]
 test2012 <- NULL
-for(i in unique(pid2012$vill.id)) {
-  temp <- pid2012[pid2012$vill.id==i,]
-  if(length(unique(temp$project.id))!=1) {test2012[length(test2012)+1] <- T} 
+for(i in pid2012$project.id) {
+  temp <- pid2012[pid2012$project.id==i,]
+  if(length(unique(temp$vill.id)) >1) {test2012[length(test2012)+1] <- T} 
   else {test2012[length(test2012)+1] <- F}}
 pid2012.sub <- pid2012[which(test2012),]
 test2016 <- NULL
-for(i in unique(pid2016$vill.id)) {
-  temp <- pid2016[pid2016$vill.id==i,]
-  if(length(unique(temp$project.id))!=1) {test2016[length(test2016)+1] <- T} 
+for(i in pid2016$project.id) {
+  temp <- pid2016[pid2016$project.id==i,]
+  if(length(unique(temp$vill.id)) >1) {test2016[length(test2016)+1] <- T} 
   else {test2016[length(test2016)+1] <- F}}
 pid2016.sub <- pid2016[which(test2016),]
 
@@ -52,7 +52,6 @@ common.index[,"id"] <- seq(1, 21, 1)
 pid <- merge(pid[,!(names(pid)=="activity.type.num")], common.index[,c("type", "id")], by.x = "activity.type", by.y = "type")
 names(pid)[names(pid)=="id"] <- "activity.type.num"
 
-# reading in complete PID data
 pid <- pid[pid$actual.end.yr!=1908 | is.na(pid$actual.end.yr),]
 
 polygons <- readRDS("inputdata/gadm36_KHM_4_sp.rds")
@@ -109,6 +108,16 @@ pid$new.repair.num[pid$new.repair.num==605] <- 5
 nrow(pid[(pid$n.bidders %in% c(2003, 3140)),])
 pid <- pid[!(pid$n.bidders %in% c(2003, 3140)),] #May want to keep the rows with high n bidders
 
+sum(pid$cs.fund>2e+8, na.rm = T)
+sum(pid$cs.fund>1e+8, na.rm = T)
+#hist(pid$cs.fund[pid$cs.fund<1e+8]) #do we want to remove major outliers?
+
+sum(pid$local.cont>3e+7, na.rm = T)
+sum(pid$local.cont>1e+7, na.rm = T)
+#hist(pid$local.cont[pid$local.cont<2e+6])
+
+# creating a dummy variable denoting whether there was competitive bidding for a contract based
+# on the number of bidders variable
 pid$bid.dummy <- ifelse(pid$n.bidders==0, 0, 1)
 
 ###################
@@ -260,49 +269,40 @@ names(pre.panel) <- gsub("v4composites_calibrated_201709.", "ntl_", names(pre.pa
 
 ###################
 
-cdb <- read.csv("InputData/CDB_merged_final.csv", stringsAsFactors = F)
-cdb <- cdb[,c("VillGis", "Year", "MAL_TOT", "FEM_TOT", "KM_ROAD", "HRS_ROAD", "KM_P_SCH", "Baby_die_Midw", "Baby_die_TBA", 
-              "THATCH_R", "Zin_Fibr_R", "TILE_R", "Flat_R_Mult", "Flat_R_One", "Villa_R", "THAT_R_Elec", "Z_Fib_R_Elec", 
-              "Til_R_Elec", "Flat_Mult_Elec", "Flat_One_Elec", "Villa_R_Elec", "Fish_ro_boat", "Trav_ro_boat", "Fish_Mo_boat",
-              "Trav_Mo_boat", "M_boat_les1T", "M_boat_ov1T", "Family_Car", "BICY_NUM", "Cow_Num", "Hors_NUM", "PIG_FAMI", 
-              "Goat_fami", "Chick_fami", "Duck_fami", "THAT_R_TV", "Z_Fib_R_TV", "Til_R_TV", "Flat_Mult_TV", "Flat_One_TV", 
-              "Villa_R_TV")]
-
-names <- c("MAL_TOT", "FEM_TOT", "KM_ROAD", "HRS_ROAD", "KM_P_SCH", "Baby_die_Midw", "Baby_die_TBA", 
-           "THATCH_R", "Zin_Fibr_R", "TILE_R", "Flat_R_Mult", "Flat_R_One", "Villa_R", "THAT_R_Elec", "Z_Fib_R_Elec", 
-           "Til_R_Elec", "Flat_Mult_Elec", "Flat_One_Elec", "Villa_R_Elec", "Fish_ro_boat", "Trav_ro_boat", "Fish_Mo_boat",
-           "Trav_Mo_boat", "M_boat_les1T", "M_boat_ov1T", "Family_Car", "BICY_NUM", "Cow_Num", "Hors_NUM", "PIG_FAMI", 
-           "Goat_fami", "Chick_fami", "Duck_fami", "THAT_R_TV", "Z_Fib_R_TV", "Til_R_TV", "Flat_Mult_TV", "Flat_One_TV", 
-           "Villa_R_TV")
-panel.names <- list()
-for(i in names) {panel.names[[length(panel.names)+1]] <- paste0(i, ".", 1992:2013)}
-
-cdb <- reshape(data = cdb, direction = "wide", v.names = names, timevar = "Year", idvar = "VillGis")
-
-cdb[apply(expand.grid(names, ".", 1992:2007), 1, paste, collapse="")] <- NA
-
-sum(pre.panel$village.code %in% cdb$VillGis)
-cdb.pre.panel <- merge(pre.panel, cdb, by.x = "village.code", by.y = "VillGis", all.x = T)
-
-panel.names <- list.append(panel.names, paste0("ntl_", 1992:2013), paste0("point.count", 1992:2013), paste0("box.count", 1992:2013))
-
-cdb.panel <- reshape(data = cdb.pre.panel, direction = "long", varying = panel.names,
-                     idvar = "panel_id", timevar = "year")
-
-cdb.panel <- cdb.panel[,!(grepl(paste0(c(2014:2017, "NA"), collapse = "|"), names(cdb.panel)))]
-
-names(cdb.panel) <- gsub("\\.1992|\\_1992|1992", "", names(cdb.panel))
-
 # reshaping cross sectional data into a panel structure with time dimension being years 1992:2013 and the panel variable being
 # cell id
+
+merge_grid_1000_lite.uncalibrated <- read.csv("inputdata/village_grid_files/merge_grid_1000_lite_uncalibrated.csv", 
+                                              stringsAsFactors = F)
+pre.panel <- merge(pre.panel, merge_grid_1000_lite.uncalibrated, by = "cell_id")
+names(pre.panel) <- gsub("v4composites.", "ntl_", names(pre.panel))
+names(pre.panel) <- gsub("\\.mean", "_uncalibrated", names(pre.panel))
+
 panel <- reshape(data = pre.panel, direction = "long", varying = list(paste0("ntl_", 1992:2013), 
                                                                       paste0("point.count", 1992:2013),
-                                                                      paste0("box.count", 1992:2013)),
+                                                                      paste0("box.count", 1992:2013),
+                                                                      paste0("ntl_", 1992:2013, "_uncalibrated")),
                  idvar = "panel_id", sep = "_", timevar = "year")
+panel <- panel[, !(names(panel) %in% c(paste0("point.count", 2014:2017), paste0("box.count", 2014:2017), "dist_to_water.na",
+                                       "dist_to_groads.na", "id", "panel_id", "village_box_ids", "village_point_ids"))]
+
+names(panel)[names(panel)=="village.code"] <- "village_code"
+names(panel)[names(panel)=="village.name"] <- "village_name"
+names(panel)[names(panel)=="province.name"] <- "province_name"
+names(panel)[names(panel)=="district.name"] <- "district_name"
+names(panel)[names(panel)=="commune.name"] <- "commune_name"
+names(panel)[names(panel)=="box.earliest.end.date"] <- "border_cell_earliest_enddate"
+names(panel)[names(panel)=="point.earliest.end.date"] <- "intra_cell_earliest_enddate"
+names(panel)[names(panel)=="box.enddate.type"] <- "border_cell_enddate_type"
+names(panel)[names(panel)=="point.enddate.type"] <- "intra_cell_enddate_type"
+names(panel)[names(panel)=="box.earliest.sector.num"] <- "border_cell_earliest_sector_num"
+names(panel)[names(panel)=="point.earliest.sector.num"] <- "intra_cell_earliest_sector_num"
+names(panel)[names(panel)=="box.earliest.sector"] <- "border_cell_earliest_sector"
+names(panel)[names(panel)=="point.earliest.sector"] <- "intra_cell_earliest_sector"
+names(panel)[names(panel)=="unique.commune.name"] <- "unique_commune_name"
 names(panel)[names(panel)=="ntl_1992"] <- "ntl"
-names(panel)[names(panel)=="point.count1992"] <- "point.count"
-names(panel)[names(panel)=="box.count1992"] <- "box.count"
+names(panel)[names(panel)=="point.count1992"] <- "intra_cell_count"
+names(panel)[names(panel)=="box.count1992"] <- "border_cell_count"
+names(panel)[names(panel)=="ntl_1992_uncalibrated"] <- "ntl_uncalibrated"
 
-
-panel <- panel[, !(names(panel) %in% c(paste0("point.count", 2014:2017), paste0("box.count", 2014:2017)))]
-# write.csv(panel, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel_intervillage_projects.csv", row.names = F)
+# write.csv(panel, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel_multi-village_projectsONLY.csv", row.names = F)
