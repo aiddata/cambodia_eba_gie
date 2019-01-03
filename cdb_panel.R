@@ -50,20 +50,28 @@ cdb <- cdb[which(!is.na(cdb$province.name)),]
 cdb <- cdb[,c("village.code", "village.name", "province.name", "district.name", "commune.name", "Year", "FAMILY", "MAL_TOT", "FEM_TOT", "KM_ROAD", "HRS_ROAD", "KM_P_SCH", "Baby_die_Midw", "Baby_die_TBA", 
               "THATCH_R", "Zin_Fibr_R", "TILE_R", "Flat_R_Mult", "Flat_R_One", "Villa_R", "THAT_R_Elec", "Z_Fib_R_Elec", 
               "Til_R_Elec", "Flat_Mult_Elec", "Flat_One_Elec", "Villa_R_Elec", "Fish_ro_boat", "Trav_ro_boat", "Fish_Mo_boat",
-              "Trav_Mo_boat", "M_boat_les1T", "M_boat_ov1T", "Family_Car", "BICY_NUM", "Cow_Num", "Hors_NUM", "PIG_FAMI", 
+              "Trav_Mo_boat", "M_boat_les1T", "M_boat_ov1T", "Family_Car", "BICY_NUM", "COW_FAMI", "Hors_Fami", "PIG_FAMI", 
               "Goat_fami", "Chick_fami", "Duck_fami", "THAT_R_TV", "Z_Fib_R_TV", "Til_R_TV", "Flat_Mult_TV", "Flat_One_TV", 
               "Villa_R_TV")]
+
+# cdb <- cdb[!grepl("n.a.", cdb$commune.name),]
 
 # assessing the FAMILY variable major outliers
 hist(cdb$FAMILY[which(cdb$FAMILY>2000)])
 tail(sort(cdb$FAMILY))
 View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$FAMILY==6361)]),])
 View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$FAMILY==6621)]),])
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$FAMILY==6665)]),])
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$FAMILY==7302)]),])
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$FAMILY==7864)]),])
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$FAMILY==8132)]),])
 aggregate(cdb$FAMILY, list(cdb$Year), mean, na.rm=T)
+
+hist(cdb$FAMILY[which(cdb$Year==2008)], ylim = c(0, 10000), xlim = c(0, 8500))
+hist(cdb$FAMILY[which(cdb$Year==2009)], ylim = c(0, 10000), xlim = c(0, 8500))
+hist(cdb$FAMILY[which(cdb$Year==2010)], ylim = c(0, 10000), xlim = c(0, 8500))
+hist(cdb$FAMILY[which(cdb$Year==2011)], ylim = c(0, 10000), xlim = c(0, 8500))
+hist(cdb$FAMILY[which(cdb$Year==2012)], ylim = c(0, 10000), xlim = c(0, 8500))
+hist(cdb$FAMILY[which(cdb$Year==2013)], ylim = c(0, 10000), xlim = c(0, 8500))
+hist(cdb$FAMILY[which(cdb$Year==2014)], ylim = c(0, 10000), xlim = c(0, 8500))
+hist(cdb$FAMILY[which(cdb$Year==2015)], ylim = c(0, 10000), xlim = c(0, 8500))
+hist(cdb$FAMILY[which(cdb$Year==2016)], ylim = c(0, 10000), xlim = c(0, 8500))
 
 # assessing the MAL_TOT variable major outliers
 hist(cdb$MAL_TOT[which(cdb$MAL_TOT>10000)])
@@ -75,10 +83,9 @@ View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$MAL_TOT==12043)]),])
 View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$MAL_TOT==14112)]),])
 # the observation with value 14337 is clearly a data error
 View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$MAL_TOT==14337)]),])
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$MAL_TOT==16142)]),])
 # the observation with value 26368 is clearly a data error
 View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$MAL_TOT==26368)]),])
-aggregate(cdb$MAL_TOT, list(cdb$Year), mean, na.rm=T)
+plot(aggregate(cdb$MAL_TOT, list(cdb$Year), mean, na.rm=T))
 
 # assessing the HRS_ROAD variable major outliers
 hist(cdb$HRS_ROAD[which(cdb$HRS_ROAD>1000)])
@@ -89,24 +96,29 @@ View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$HRS_ROAD==900)]),])
 # all three observations with value 1800 are clearly data errors
 View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$HRS_ROAD==1800)[1]]),])
 View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$HRS_ROAD==1800)[2]]),])
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$HRS_ROAD==1800)[3]]),])
 # the observation with value 2400 is clearly a data error
 View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$HRS_ROAD==2400)]),])
-aggregate(cdb$HRS_ROAD, list(cdb$Year), mean, na.rm=T)
+plot(aggregate(cdb$HRS_ROAD, list(cdb$Year), mean, na.rm=T))
 
 # assessing the Family_Car variable major outliers
 hist(cdb$Family_Car[which(cdb$Family_Car>800)])
 tail(sort(cdb$Family_Car))
 # weird intra-village variation for this subset
 View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$Family_Car==2455)]),])
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$Family_Car==2526)]),])
 # the observation with value 4113 is clearly a data error
 View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$Family_Car==4113)]),])
 View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$Family_Car==5307)]),])
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$Family_Car==5631)]),])
-# the observation with value 2400 is clearly a data error
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$Family_Car==10435)]),])
-aggregate(cdb$HRS_ROAD, list(cdb$Year), mean, na.rm=T)
+plot(aggregate(cdb$Family_Car, list(cdb$Year), mean, na.rm=T))
+
+hist(cdb$Family_Car[which(cdb$Year==2008)], xlim = c(0, 2000))
+hist(cdb$Family_Car[which(cdb$Year==2009)], xlim = c(0, 2000))
+hist(cdb$Family_Car[which(cdb$Year==2010)], xlim = c(0, 2000))
+hist(cdb$Family_Car[which(cdb$Year==2011)], xlim = c(0, 2000))
+hist(cdb$Family_Car[which(cdb$Year==2012)], xlim = c(0, 2000))
+hist(cdb$Family_Car[which(cdb$Year==2013)], xlim = c(0, 2000))
+hist(cdb$Family_Car[which(cdb$Year==2014)], xlim = c(0, 2000))
+hist(cdb$Family_Car[which(cdb$Year==2015)], xlim = c(0, 2000))
+hist(cdb$Family_Car[which(cdb$Year==2016)], xlim = c(0, 2000))
 
 # randomly select a village and view, across years, the variation in variables of interest
 View(cdb[cdb$village.code==sample(cdb$village.code, 1),])
@@ -116,29 +128,31 @@ View(cdb[cdb$village.code==sample(cdb$village.code, 1),])
 names <- c("FAMILY", "MAL_TOT", "FEM_TOT", "KM_ROAD", "HRS_ROAD", "KM_P_SCH", "Baby_die_Midw", "Baby_die_TBA", 
            "THATCH_R", "Zin_Fibr_R", "TILE_R", "Flat_R_Mult", "Flat_R_One", "Villa_R", "THAT_R_Elec", "Z_Fib_R_Elec", 
            "Til_R_Elec", "Flat_Mult_Elec", "Flat_One_Elec", "Villa_R_Elec", "Fish_ro_boat", "Trav_ro_boat", "Fish_Mo_boat",
-           "Trav_Mo_boat", "M_boat_les1T", "M_boat_ov1T", "Family_Car", "BICY_NUM", "Cow_Num", "Hors_NUM", "PIG_FAMI", 
+           "Trav_Mo_boat", "M_boat_les1T", "M_boat_ov1T", "Family_Car", "BICY_NUM", "COW_FAMI", "Hors_Fami", "PIG_FAMI", 
            "Goat_fami", "Chick_fami", "Duck_fami", "THAT_R_TV", "Z_Fib_R_TV", "Til_R_TV", "Flat_Mult_TV", "Flat_One_TV", 
            "Villa_R_TV")
 
 panel.names <- list()
 for(i in names) {panel.names[[length(panel.names)+1]] <- paste0(i, ".", 2008:2016)}
 
-cdb <- reshape(data = cdb, direction = "wide", v.names = names, timevar = "Year", idvar = "VillGis")
+cdb <- reshape(data = cdb, direction = "wide", v.names = names, timevar = "Year", idvar = "village.code")
 
 # cdb[apply(expand.grid(names, ".", 1992:2007), 1, paste, collapse="")] <- NA
 
 sum(cdb$VillGis %in% treatment$village.code)
 
-cdb.panel <- merge(cdb, treatment, by.x = "VillGis", by.y = "village.code")
+cdb.panel <- merge(cdb, treatment, by.x = "village.code", by.y = "village.code")
 
 cdb.panel <- cdb.panel[,!(grepl(paste0(c(2003:2007, "NA"), collapse = "|"), names(cdb.panel)))]
 
 cdb.panel <- reshape(data = cdb.panel, direction = "long", varying = list.append(panel.names, paste0("count", 2008:2016)),
-                     idvar = "VillGis", timevar = "year")
+                     idvar = "village.code", timevar = "year")
 
-names(cdb.panel) <- gsub("\\.2008|2008", "", names(cdb.panel))
+names(cdb.panel) <- gsub("\\.2008|2008|_x", "", names(cdb.panel))
 names(cdb.panel) <- gsub("\\.", "_", names(cdb.panel))
 cdb.panel <- cdb.panel[,!names(cdb.panel)=="count2017"]
+cdb.panel <- cdb.panel[,!grepl("_y", names(cdb.panel))]
+
 
 # write.csv(cdb.panel, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/cdb_panel.csv", row.names = F)
 # cdb.panel <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/cdb_panel.csv", stringsAsFactors = F)

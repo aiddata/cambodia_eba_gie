@@ -279,6 +279,13 @@ outreg2 using "pre_2010/pre2010_ntl_continuous.doc", append noni addtext("Year F
 
 ***
 
+cd "no_dark_subset"
+local txtfiles: dir . files "*.txt"
+foreach txt in `txtfiles' {
+	erase `"`txt'"'
+}
+
+cd ..
 cd "alternate_dep_vars"
 local txtfiles: dir . files "*.txt"
 foreach txt in `txtfiles' {
