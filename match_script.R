@@ -1,10 +1,20 @@
+#-----------------------------
+# GIE of Cambodia Public Infrastructure and Local Governance Program
+# For SIDA / EBA
+# Matching shape data provided by ODC and their GIS Analyst with administrative
+# data from the National Gazetteer
+# The resulting shape data (along with a Geoquery extract) will be merged with treatment data to create the panel
+#------------------------------
 
+setwd("~/box sync/cambodia_eba_gie")
+
+library(plyr)
 library(sf)
 library(readxl)
-library(plyr)
+library(stringr)
 
 #reading gazetteer data in
-gazetteer.data <- as.data.frame(read_excel("~/GitHub/cambodia_eba_gie/inputData/National Gazetteer 2014.xlsx", 
+gazetteer.data <- as.data.frame(read_excel("inputdata/National Gazetteer 2014.xlsx", 
                                            sheet = 4))
 gazetteer.data$Id <- as.character(gazetteer.data$Id)
 gazetteer.data$Name_EN <- toupper(as.character(gazetteer.data$Name_EN))
@@ -22,25 +32,20 @@ for(i in 1:nrow(gazetteer.data)) {
 ###################
 
 #reading punwath data in
-punwath.data <- as.data.frame(st_read("~/Box Sync/cambodia_eba_gie/inputData/Cphum09-84-2016/Cphum09-84-2016.shp",
+punwath.data <- as.data.frame(st_read("inputdata/Cphum09-84-2016/Cphum09-84-2016.shp",
                                       stringsAsFactors = F))
 punwath.data$Code_Phum <- as.character(punwath.data$Code_Phum)
 punwath.data$Phum_Rom <- toupper(as.character(punwath.data$Phum_Rom))
+punwath.data$unverified <- 1
 
 ###################
 
 #reading shape data in
-shape.data <- as.data.frame(st_read("~/GitHub/cambodia_eba_gie/inputData/census_2008_villages/Village.shp", 
+shape.data <- as.data.frame(st_read("inputdata/census_2008_villages/Village.shp", 
                                     stringsAsFactors = F))
 shape.data$VILL_CODE <- as.character(as.numeric(shape.data$VILL_CODE))
 shape.data$VILL_NAME <- toupper(as.character(shape.data$VILL_NAME))
-#some village codes include an extra 0 at the front of the number. I omit this zero to prevent incorrect mismatches
-# for(i in 1:nrow(shape.data)) {
-#   temp.id <- strsplit(shape.data[i, "VILL_CODE"], split = "")[[1]]
-#   if (temp.id[1]=="0") {
-#     shape.data[i, "VILL_CODE"] <- paste0(temp.id[2:length(temp.id)], collapse = "")
-#   }
-# }
+shape.data$unverified <- 0
 
 ###################
 
@@ -128,13 +133,12 @@ gazetteer.shape.fullmatch$Name_EN[is.na(gazetteer.shape.fullmatch$Name_EN)] <-
 #   gazetteer.shape.fullmatch$VILL_CODE[is.na(gazetteer.shape.fullmatch$Id)]
 
 #retaining only necessary columns for the matched datasets and aligning column names
-gazetteer.shape <- gazetteer.shape.fullmatch[,c("VILL_CODE", "ProvEn", "Name_EN", "geometry", "TOTPOP")]
-names(gazetteer.shape) <- c("vill_code", "province_name", "vill_name", "geometry", "total_pop")
-gazetteer.punwath <- gazetteer.punwath.fullmatch[,c("Code_Phum", "ProvEn", "Name_EN", "geometry")]
-names(gazetteer.punwath) <- c("vill_code", "province_name", "vill_name", "geometry")
+gazetteer.shape <- gazetteer.shape.fullmatch[,c("VILL_CODE", "ProvEn", "Name_EN", "geometry", "TOTPOP", "unverified")]
+names(gazetteer.shape) <- c("vill_code", "province_name", "vill_name", "geometry", "total_pop", "unverified")
+gazetteer.punwath <- gazetteer.punwath.fullmatch[,c("Code_Phum", "ProvEn", "Name_EN", "geometry", "unverified")]
+names(gazetteer.punwath) <- c("vill_code", "province_name", "vill_name", "geometry", "unverified")
 
 #binding matched shape/gazetteer data with matched punwath/gazetteer data
-library(stringr)
 
 full.data <- rbind.fill(gazetteer.shape, gazetteer.punwath)
 full.data$geo <- as.character(full.data$geometry)
@@ -147,18 +151,6 @@ full.data$lat <- matrix(unlist(str_split(full.data$geo, ",")), ncol = 2, byrow =
 full.data$long <- matrix(unlist(str_split(full.data$geo, ",")), ncol = 2, byrow = T)[,2]
 
 full.data <- full.data[!duplicated(full.data$vill_code),]
-write.csv(full.data[,c("vill_code", "vill_name", "province_name", "total_pop", "lat", "long")], 
-          "~/Desktop/shape_data.csv", row.names = F)
-
-
-aims <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/eba_province_panel.csv", stringsAsFactors = F)[,-1]
-aims$provinces[aims$provinces=="Siem Reap"] <- "Siemreap"
-
-panel <- merge(aims, full.data, by.x = "provinces", by.y = "province_name")
-
-
-
-
-
-
+# write.csv(full.data[,c("vill_code", "vill_name", "province_name", "total_pop", "unverified", "lat", "long")],
+#           "processeddata/matched_shape_data.csv", row.names = F)
 

@@ -1,10 +1,4 @@
-#-----------------------------
-# GIE of Cambodia Public Infrastructure and Local Governance Program
-# For SIDA / EBA
-# Merging Project Information Database treatment data with covariate data from the Commune Database and 
-# spatio-temporal data measuring nighttime light of Cambodia from GeoQuery
-#------------------------------
-
+# multi-village projects make up ~20% of all PID projects
 setwd("~/box sync/cambodia_eba_gie")
 
 library(plyr)
@@ -19,28 +13,45 @@ library(rlist)
 # the commented out code merges the three PID datasets and assigns a common Activity Type index to the PID data
 # it then writes out a complete PID dataset that can be read in instead of re-running this code each time
 
-# pid2016 <- read.csv("pid/completed_pid/pid_2016.csv", stringsAsFactors = F)
-# pid2012 <- read.csv("pid/completed_pid/pid_2012.csv", stringsAsFactors = F)
-# pid2008 <- read.csv("pid/completed_pid/pid_2008.csv", stringsAsFactors = F)
-# pid <- rbind.fill(pid2016, pid2012, pid2008)
-# 
-# common.index <- as.data.frame(matrix(data = NA, nrow = 21, ncol = 0))
-# common.index[1:17,"2008"] <- sort(unique(pid2008$activity.type))
-# common.index[1:17,"2012"] <- sort(unique(pid2012$activity.type))[match(common.index[1:17,"2008"],
-#                                                                        sort(unique(pid2012$activity.type)))]
-# common.index[1:17,"2016"] <- sort(unique(pid2016$activity.type))[match(common.index[1:17,"2008"],
-#                                                                        sort(unique(pid2016$activity.type)))]
-# common.index[18:21, "2012"] <- unique(pid2012$activity.type)[!(unique(pid2012$activity.type) %in% common.index[1:17,"2012"])]
-# common.index[18:21, "2016"] <- unique(pid2016$activity.type)[match(common.index[18:21, "2012"], unique(pid2016$activity.type))]
-# common.index[,"type"] <- c(common.index[1:17,"2008"], common.index[18:21, "2012"])
-# common.index[,"id"] <- seq(1, 21, 1)
-# 
-# pid <- merge(pid[,!(names(pid)=="activity.type.num")], common.index[,c("type", "id")], by.x = "activity.type", by.y = "type")
-# names(pid)[names(pid)=="id"] <- "activity.type.num"
-# write.csv(pid, "pid/completed_pid/pid_merge.csv", row.names = F)
+pid2008 <- read.csv("PID/completed_pid/pid_2008.csv", stringsAsFactors = F)
+pid2012 <- read.csv("PID/completed_pid/pid_2012.csv", stringsAsFactors = F)
+pid2016 <- read.csv("PID/completed_pid/pid_2016.csv", stringsAsFactors = F)
+test2008 <- NULL
+for(i in pid2008$project.id) {
+  temp <- pid2008[pid2008$project.id==i,]
+  if(length(unique(temp$vill.id)) >1) {test2008[length(test2008)+1] <- T} 
+  else {test2008[length(test2008)+1] <- F}}
+pid2008.sub <- pid2008[which(test2008),]
+test2012 <- NULL
+for(i in pid2012$project.id) {
+  temp <- pid2012[pid2012$project.id==i,]
+  if(length(unique(temp$vill.id)) >1) {test2012[length(test2012)+1] <- T} 
+  else {test2012[length(test2012)+1] <- F}}
+pid2012.sub <- pid2012[which(test2012),]
+test2016 <- NULL
+for(i in pid2016$project.id) {
+  temp <- pid2016[pid2016$project.id==i,]
+  if(length(unique(temp$vill.id)) >1) {test2016[length(test2016)+1] <- T} 
+  else {test2016[length(test2016)+1] <- F}}
+pid2016.sub <- pid2016[which(test2016),]
 
-# reading in complete PID data
-pid <- read.csv("pid/completed_pid/pid_merge.csv",stringsAsFactors = F)
+pid <- rbind.fill(pid2016.sub, pid2012.sub, pid2008.sub)
+# multi-village projects make up ~20% of all PID projects
+
+common.index <- as.data.frame(matrix(data = NA, nrow = 21, ncol = 0))
+common.index[1:17,"2008"] <- sort(unique(pid2008$activity.type))
+common.index[1:17,"2012"] <- sort(unique(pid2012$activity.type))[match(common.index[1:17,"2008"],
+                                                                       sort(unique(pid2012$activity.type)))]
+common.index[1:17,"2016"] <- sort(unique(pid2016$activity.type))[match(common.index[1:17,"2008"],
+                                                                       sort(unique(pid2016$activity.type)))]
+common.index[18:21, "2012"] <- unique(pid2012$activity.type)[!(unique(pid2012$activity.type) %in% common.index[1:17,"2012"])]
+common.index[18:21, "2016"] <- unique(pid2016$activity.type)[match(common.index[18:21, "2012"], unique(pid2016$activity.type))]
+common.index[,"type"] <- c(common.index[1:17,"2008"], common.index[18:21, "2012"])
+common.index[,"id"] <- seq(1, 21, 1)
+
+pid <- merge(pid[,!(names(pid)=="activity.type.num")], common.index[,c("type", "id")], by.x = "activity.type", by.y = "type")
+names(pid)[names(pid)=="id"] <- "activity.type.num"
+
 pid <- pid[pid$actual.end.yr!=1908 | is.na(pid$actual.end.yr),]
 
 polygons <- readRDS("inputdata/gadm36_KHM_4_sp.rds")
@@ -108,94 +119,6 @@ sum(pid$local.cont>1e+7, na.rm = T)
 # creating a dummy variable denoting whether there was competitive bidding for a contract based
 # on the number of bidders variable
 pid$bid.dummy <- ifelse(pid$n.bidders==0, 0, 1)
-
-# write.csv(pid, "ProcessedData/pid.csv", row.names = F)
-# pid <- read.csv("ProcessedData/pid.csv", stringsAsFactors = F)
-
-###################
-
-# building stacked barplots of activity type by year by province
-# for(i in unique(pid$province.name)) {
-#   # taking the subset of pid occurring in province i
-#   temp <- pid[which((pid$province.name==i & !is.na(pid$activity.type) & !is.na(pid$actual.end.yr))),]
-#   if(nrow(temp)>1) {
-#     # creating a matrix to store the data that will be used to build plots
-#     temp.mat <- as.data.frame(matrix(0, ncol = 21, nrow = 16))
-#     a <- pid[!duplicated(pid[,c("activity.type", "activity.type.num")]),
-#                     c("activity.type", "activity.type.num")]
-#     a <- a[!is.na(a$activity.type.num),]
-#     names(temp.mat) <- a$activity.type[match(c(1:21), a$activity.type.num)]
-#     row.names(temp.mat) <- c(2003:2018)
-# 
-#     for(j in unique(temp$actual.end.yr)) {
-#       # filling row j in the matrix with the activity type data from the corresponding year
-#       temp2 <- temp[which(temp$actual.end.yr==j),]
-#       x <- table(temp2$activity.type.num)
-#       temp.mat[(row.names(temp.mat)==j), as.numeric(names(x))] <- table(temp2$activity.type.num)
-#     }
-#     # producing barplots for the distribution of activity types for projects in each province in each year
-#     mycolors <- c('#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe',
-#                 '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080',
-#                 '#000000')
-#     png(paste0("/Users/christianbaehr/Box Sync/cambodia_eba_gie/descriptive_stats/activity_plots/activity_",
-#                gsub(" ", "", i), ".png"), width = 10, height = 7, res = 300, units = 'in')
-#     barplot(t(as.matrix(temp.mat))[colSums(temp.mat)>0,],
-#             main = paste("Activity Type Distribution,", i), xlab = "Year", ylab = "Number of Projects",
-#             col = mycolors[which(colSums(temp.mat)>0)])
-#     legend("topright", legend=row.names(t(as.matrix(temp.mat)))[colSums(temp.mat)>0], cex = 0.75,
-#            fill = mycolors[which(colSums(temp.mat)>0)])
-#     dev.off()
-#   }
-# }
-
-###################
-
-# building a matrix of data to be used in the commune level treatment rate graph. I store this data in the Box Sync
-# so it can be retrieved instead of being re-run each time
-
-# graph.data <- as.data.frame(matrix(data = NA, nrow = 10, ncol = 16))
-# names(graph.data) <- sort(unique(pid$actual.end.yr))
-# row.names(graph.data) <- paste0(seq(10, 100, 10), "%_thres")
-# count <- 0
-# for(i in sort(unique(pid$actual.end.yr))) {
-#   count=count+1
-#   for(threshold in seq(0.1, 1, 0.1)) {
-#     x <- rep(NA, length(unique(pid$commune.name)))
-#     for(j in 1:length(unique(pid$commune.name))) {
-#       temp <- pid[which(pid$commune.name==unique(pid$commune.name)[j]),]
-#       x[j] <- nrow(temp[(temp$actual.end.yr<=i),])/nrow(temp) >= threshold
-#     }
-#     graph.data[paste0(threshold*100, "%_thres"), as.character(i)] <- sum(x[!is.na(x)])/length(x[!is.na(x)])
-#   }
-#   print(count)
-# }
-# write.csv(graph.data, "/Users/christianbaehr/Box Sync/cambodia_eba_gie/descriptive_stats/treatment_rates/treatment_rates.csv",
-#           row.names = F)
-
-# reading on treatment rates data for plots
-# graph.data <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/descriptive_stats/treatment_rates/treatment_rates.csv",
-#                        stringsAsFactors = F)
-# # producing line graphs identifying the share of villages that have received X% of total treatment by each year (cumulative)
-# for(i in 1:nrow(graph.data)) {
-#   if(i==1) {
-#     png("/Users/christianbaehr/Box Sync/cambodia_eba_gie/descriptive_stats/treatment_rates/treatment_rate_graph.png",
-#         width = 10, height = 7, res = 300, units = 'in')
-#     plot(as.numeric(graph.data[1,]), col = i, type = "b", axes = F, xlab = NA, ylab = NA)
-#   } else {
-#     points(as.numeric(graph.data[i,]), col = i, type = "b")
-#   }
-#   if(i==nrow(graph.data)) {
-#     axis(side = 1, at = c(1:ncol(graph.data)), labels = gsub("X", "", names(graph.data)), tick = T)
-#     axis(side = 2, at = c(1:nrow(graph.data)/10), labels = paste0(seq(10, 100, 10), "%"),
-#          tick = T)
-#     mtext(side = 1, "Year", line = 2)
-#     mtext(side = 2, "% communes with > X% treatment", line = 2)
-#     mtext(side = 3, "% treatment by year at commune level")
-#     legend("bottomright", legend = paste0(seq(10, 100, 10), "% thres"), fill = c(1:nrow(graph.data)),
-#            col = c(1:nrow(graph.data)), cex = 1)
-#     dev.off()
-#   }
-# }
 
 ###################
 
@@ -267,8 +190,8 @@ for(i in 1:nrow(grid_1000_matched_data)) {
 
 # creating a skeleton dataset to store the merged PID/shape and grid cell data
 pre.panel.names <- c("village.code", "village.name", "province.name", "district.name", "commune.name", 
-                      as.vector(outer(c("box", "point"), c("earliest.end.date", "enddate.type", "earliest.sector.num", "earliest.sector", 
-                                                           paste0("count", 1992:2017)), paste, sep=".")), names(grid_1000_matched_data))
+                     as.vector(outer(c("box", "point"), c("earliest.end.date", "enddate.type", "earliest.sector.num", "earliest.sector", 
+                                                          paste0("count", 1992:2017)), paste, sep=".")), names(grid_1000_matched_data))
 
 pre.panel <- as.data.frame(matrix(NA, nrow = nrow(grid_1000_matched_data), ncol = length(pre.panel.names)))
 names(pre.panel) <- pre.panel.names
@@ -277,8 +200,8 @@ names(pre.panel) <- pre.panel.names
 for(i in 1:length(unique(grid_1000_matched_data$cell_id))) {
   # creating temporary datasets containing the PID/shape data of the villages that lie within or border grid cell i. This
   # matching relies on the list objects build previously to identify which villages are within/bordering each cell
-  temp.point <- treatment[which(treatment$village.code %in% as.character(as.numeric(id.list[[i]]))),]
-  temp.box <- treatment[which(treatment$village.code %in% as.character(as.numeric(id.list2[[i]]))),]
+  temp.point <- treatment[which(treatment$village.code %in% as.character(id.list[[i]])),]
+  temp.box <- treatment[which(treatment$village.code %in% as.character(id.list2[[i]])),]
   
   # if there are one or more villages within grid cell i, then we fill out the variables with the prefix "point." with
   # the information frmo those villages
@@ -344,35 +267,6 @@ pre.panel$unique.commune.name <- paste(pre.panel$province.name, pre.panel$distri
 # editing variable names to make data reshaping easier
 names(pre.panel) <- gsub("v4composites_calibrated_201709.", "ntl_", names(pre.panel)) %>% gsub(".mean", "", .)
 
-# write.csv(pre.panel, "ProcessedData/pre_panel.csv", row.names=F)
-# pre.panel <- read.csv("ProcessedData/pre_panel.csv", stringsAsFactors = F)
-
-###################
-
-# producing project count and ntl quantile statistic data frames by year/province
-# for(i in unique(pre.panel$province.name)) {
-#   temp <- as.data.frame(apply(pre.panel[which(pre.panel$province.name==i), grep("ntl", names(pre.panel))], 2, as.numeric))
-# 
-#   sum.stats <- as.data.frame(matrix(data=NA, ncol = 8, nrow = 27))
-#   row.names(sum.stats) <- 1992:2018
-#   colnames(sum.stats) <- c("count", "pct.count", "0%", "25%", "Mean", "Median", "75%", "100%")
-# 
-#   for(j in unique(pre.panel$point.earliest.end.date)[!is.na(unique(pre.panel$point.earliest.end.date))]) {
-#     count <- nrow(pre.panel[which((pre.panel$province.name==i & pre.panel$point.earliest.end.date==j)),])
-#     sum.stats[grep(j, row.names(sum.stats)), 1] <- count
-#     sum.stats[grep(j, row.names(sum.stats)), 2] <- count/nrow(pre.panel[which(pre.panel$province.name==i & !is.na(pre.panel$point.earliest.end.date)),])
-#   }
-# 
-#   x <- as.data.frame(cbind(apply(temp, 2, mean, na.rm=T), t(apply(temp, 2, quantile, na.rm=T))))
-#   row.names(x) <-
-#     gsub("ntl_", "", row.names(x)) %>%
-#     gsub(".mean", "", .)
-#   sum.stats[which(row.names(sum.stats) %in% row.names(x)),3:8] <- x[,c(2:3, 1, 4:6)]
-# 
-#   assign(paste0("sum_stats_", gsub(" ", "", i)), sum.stats)
-#   # write.csv(sum.stats, paste0("/Users/christianbaehr/Box Sync/cambodia_eba_gie/descriptive_stats/summary_stats/", gsub(" ", "", i), ".csv"))
-# }
-
 ###################
 
 # reshaping cross sectional data into a panel structure with time dimension being years 1992:2013 and the panel variable being
@@ -411,5 +305,4 @@ names(panel)[names(panel)=="point.count1992"] <- "intra_cell_count"
 names(panel)[names(panel)=="box.count1992"] <- "border_cell_count"
 names(panel)[names(panel)=="ntl_1992_uncalibrated"] <- "ntl_uncalibrated"
 
-# write.csv(panel, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel.csv", row.names = F)
-# panel <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel.csv", stringsAsFactors = F)
+# write.csv(panel, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel_multi-village_projectsONLY.csv", row.names = F)

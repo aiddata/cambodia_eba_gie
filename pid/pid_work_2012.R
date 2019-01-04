@@ -1,12 +1,17 @@
+#-----------------------------
+# GIE of Cambodia Public Infrastructure and Local Governance Program
+# For SIDA / EBA
+# Compiling Project Information Database (from Cambodia) for 2009-12
+# Will use project completion dates to create treatment info
+#------------------------------
 
-#g.shape <- read.csv("~/Box Sync/Pro")
-#only 2009-2012
+setwd("~/box sync/cambodia_eba_gie")
 
 library(readxl)
 library(stringr)
-contract.output <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2012/ContractOutput.xlsx")
-contract.budget <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2012/ContractBudget.xlsx")
-list.fund.source <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2012/ListFundSource.xlsx")
+contract.output <- read_excel("pid/pid_excel_2012/ContractOutput.xlsx")
+contract.budget <- read_excel("pid/pid_excel_2012/ContractBudget.xlsx")
+list.fund.source <- read_excel("pid/pid_excel_2012/ListFundSource.xlsx")
 list.fund.source <- list.fund.source[,c("Id", "Name_EN")]
 #merging contract budget data with "list.fund.source", which contains the name of each funding
 #source, i.e. Commune/Sankat Fund or Local Contributions
@@ -27,7 +32,7 @@ for(i in contract.budget.new[,"ContractId"]) {
   
   if(nrow(temp.output)>0) {
     #taking the sum of each contributions vector and dividing them by the number of observations of the
-    #contract ID value in the contract budget dataset. This will help avoid counting contributions by these
+    #contract ID value in the contract output dataset. This will help avoid counting contributions by these
     #funding sources multiple times
     contract.budget.new$cs.fund[contract.budget.new$ContractId==i] <- sum(temp.cs)/nrow(temp.output)
     contract.budget.new$local.cont[contract.budget.new$ContractId==i] <- sum(temp.lc)/nrow(temp.output)
@@ -54,10 +59,10 @@ sum(contract.merge$local.cont)
 
 rm(list=setdiff(ls(), "contract.merge"))
 
-contract <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2012/Contract.xlsx")
+contract <- read_excel("pid/pid_excel_2012/Contract.xlsx")
 contract <- merge(contract, contract.merge, by.x="Id", by.y="ContractId")
 
-contract.progress <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2012/ContractProgress.xlsx")
+contract.progress <- read_excel("pid/pid_excel_2012/ContractProgress.xlsx")
 
 #creating empty columns for the last report data of each contract and the progress of each contract at the 
 #last report date
@@ -80,17 +85,17 @@ for(i in unique(contract.progress$ContractId)) {
 ###################
 
 #merging the contract data with the reference data identifying Activity Description (eg. laterite rd, crushed stone rd)
-list.standard.output <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2012/ListStandardOutput.xlsx")
+list.standard.output <- read_excel("pid/pid_excel_2012/ListStandardOutput.xlsx")
 sum(list.standard.output$Id %in% contract$OutputId)
 contract <- merge(contract, list.standard.output, by.x="OutputId", by.y="Id")
 
 #merging the contract data with the reference data further describing the activity (eg. unpaved rds, bridges, etc.)
-list.output.groups <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2012/ListOutputGroups.xlsx")
+list.output.groups <- read_excel("pid/pid_excel_2012/ListOutputGroups.xlsx")
 sum(list.output.groups$Id %in% contract$GroupId)
 contract <- merge(contract, list.output.groups, by.x="GroupId", by.y="Id")
 
 #merging the contract data with the reference data describing the Activity Type (eg. Rural Transport, Irrigation, etc.)
-list.subsector <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2012/ListSubsector.xlsx")
+list.subsector <- read_excel("pid/pid_excel_2012/ListSubsector.xlsx")
 sum(list.subsector$Id %in% contract$SubSectorId)
 contract <- merge(contract, list.subsector, by.x="SubSectorId", by.y="Id")
 
@@ -98,9 +103,9 @@ contract <- merge(contract, list.subsector, by.x="SubSectorId", by.y="Id")
 
 rm(list=setdiff(ls(), "contract"))
 
-project <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2012/Project.xlsx")
-project.output <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2012/ProjectOutput.xlsx")
-lookup <- read_excel("~/Box Sync/cambodia_eba_gie/PID/pid_excel_2012/Lookup.xlsx")
+project <- read_excel("pid/pid_excel_2012/Project.xlsx")
+project.output <- read_excel("pid/pid_excel_2012/ProjectOutput.xlsx")
+lookup <- read_excel("pid/pid_excel_2012/Lookup.xlsx")
 
 unique(project.output$List_Project_Output_Type_ID)
 unique(lookup$Id)
@@ -159,17 +164,18 @@ for(i in 1:nrow(project)) {
 #changing the one variable name that is duplicated
 names(project)[151] <- "Name_EN.y.y.2"
 #only retaining the necessary variables from the merged project-contract data
-project <- project[,c("Id.x", "Id.y", "Name_EN.y.y.2",
-                      "Name_EN.y.y", "SubSectorId.x", "List_Project_Output_Type_ID", "Name_EN.y.x",
+project <- project[,c("Id.x", "Id.y", "Name_EN.y.y.2", "SubSectorId.x",
+                      "Name_EN.y.y", "List_Project_Output_Type_ID", "Name_EN.y.x",
                       "plannedstartyear", "plannedstartmonth", "actualstartyear", "actualstartmonth",
                       "plannedendyear", "plannedendmonth", "actualendyear", "actualendmonth", "last.report",
                       "progress", "Bidders", "AwardedByBidding", "cs.fund", "local.cont", "VillageId.x")]
 #assigning meaningful names to the variables in the data
-names(project) <- c("project.id", "contract.id", "activity.type",
-                    "activity.desc", "subsector", "new.repair.num", "new.repair", "planned.start.yr",
+names(project) <- c("project.id", "contract.id", "activity.type", "activity.type.num",
+                    "activity.desc", "new.repair.num", "new.repair", "planned.start.yr",
                     "planned.start.mo", "actual.start.yr", "actual.start.mo", "planned.end.yr", "planned.end.mo",
                     "actual.end.yr", "actual.end.mo", "last.report", "status", "n.bidders", "bid.dummy", "cs.fund",
                     "local.cont", "vill.id")
+project$pid_id <- seq(200001, (200000+nrow(project)), 1)
 
-write.csv(project, "~/Box Sync/cambodia_eba_gie/PID/completed_pid/pid_2012.csv", row.names = F)
+# write.csv(project, "pid/completed_pid/pid_2012.csv", row.names = F)
 

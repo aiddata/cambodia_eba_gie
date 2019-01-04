@@ -1,3 +1,12 @@
+#-----------------------------
+# GIE of Cambodia Public Infrastructure and Local Governance Program
+# For SIDA / EBA
+# Formatting pretreatment data on the AIMS project
+# Will use AIMS data to identify pre-treatment trends
+#------------------------------
+
+setwd("~/box sync/cambodia_eba_gie")
+
 ##Load Libraries and Data
 library(readxl)
 library(dplyr)
@@ -6,7 +15,7 @@ library(stringr)
 library(reshape2)
 
 #AIMS = read_excel("C:/Users/rrotberg/Desktop/Cambodia EBA/cambodia control variable.xlsx")
-AIMS = read_excel("/Users/christianbaehr/Documents/GitHub/cambodia_eba_gie/inputData/cambodia control variable.xlsx")
+AIMS = read_excel("inputdata/pretreatment/unformatted/cambodia control variable.xlsx")
 
 ### Reorder Variables
 camb_names = names(AIMS)
@@ -15,8 +24,6 @@ order_of_names = c("ID", "Project Title", "Start", "Completion", "Project Status
 
 camb_names = setdiff(camb_names, order_of_names)
 AIMS = AIMS %>% select(order_of_names, camb_names)
-
-
 
 ###
 all_provinces = na.omit(unique(unlist(str_split(AIMS$Province, pattern = " / "))))
@@ -43,4 +50,4 @@ completion_dummies = completion_dummies[,order(colnames(completion_dummies))]
 AIMS = cbind.data.frame(AIMS, completion_dummies)
 AIMS = AIMS %>% select(`ID`,`Project Title`, `Total Budget`, 43:93)
 
-write.csv(AIMS, "/Users/christianbaehr/Box Sync/cambodia_eba_gie/inputData/AIMS.csv")
+#write.csv(AIMS, "inputdata/pretreatment/AIMS.csv")

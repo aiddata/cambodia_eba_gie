@@ -1,15 +1,21 @@
+#-----------------------------
+# GIE of Cambodia Public Infrastructure and Local Governance Program
+# For SIDA / EBA
+# Formatting pretreatment data on the Seila/Carere project (1996-2003)
+# Will use Seila data to identify pre-treatment trends
+#------------------------------
+
+setwd("~/box sync/cambodia_eba_gie")
+
 ##Load Libraries and Data
 library(readxl)
 library(dplyr)
 library(tidyr)
 library(stringr)
 
-
-
-
 ########## Create Seila Binary Variable
 #all_provinces=read_excel("C:/Users/rrotberg/Desktop/Cambodia EBA/province names census.xlsx")
-all_provinces=read_excel("/Users/christianbaehr/Documents/GitHub/cambodia_eba_gie/inputData/province names census.xlsx")
+all_provinces=read_excel("inputdata/pretreatment/unformatted/province names census.xlsx")
 all_provinces=all_provinces$Name_EN
 provinces_in_seila = c("Siemreap", "Banteay Meanchey", "Battambang",
              "Pursat", "Ratanak Kiri", "Oddar Meanchey", "Pailin",
@@ -40,7 +46,7 @@ Seila$`2003` = y_03
 
 
 #Seila_commune=read.csv("C:/Users/rrotberg/Desktop/Cambodia EBA/province_in_seila.csv")
-Seila_commune=read.csv("/Users/christianbaehr/Documents/GitHub/cambodia_eba_gie/inputData/province_in_seila.csv")
+Seila_commune=read.csv("inputdata/pretreatment/unformatted/province_in_seila.csv")
 Seila_commune$`%1996`= Seila_commune$X1996/Seila_commune$total_communes*100
 Seila_commune$`%1997`= Seila_commune$X1997/Seila_commune$total_communes*100
 Seila_commune$`%1998`= Seila_commune$X1998/Seila_commune$total_communes*100
@@ -59,4 +65,4 @@ Seila[is.na(Seila)]=0
 
 
 #write.csv(Seila,"C:/Users/rrotberg/Desktop/Cambodia EBA/Seila.csv",row.names = F)
-write.csv(Seila,"/Users/christianbaehr/Box Sync/cambodia_eba_gie/inputData/Seila.csv",row.names = F)
+#write.csv(Seila,"inputdata/pretreatment/Seila.csv",row.names = F)

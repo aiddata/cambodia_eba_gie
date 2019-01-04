@@ -1,12 +1,21 @@
+#-----------------------------
+# GIE of Cambodia Public Infrastructure and Local Governance Program
+# For SIDA / EBA
+# Merging Seila and AIMS pretreatment data with Gazetteer province data and
+# creating a pseudo-panel dataset of Seila/AIMS projects
+#------------------------------
+
+setwd("~/box sync/cambodia_eba_gie")
+
 library(readxl)
 library(RCurl)
 
 #pull in AIMS data
-aims <- read.csv("~/Box Sync/cambodia_eba_gie/inputData/AIMS.csv")[,-1]
+aims <- read.csv("inputdata/pretreatment/aims.csv", stringsAsFactors = F)[,-1]
 #pull in Gazetteer data with province names and IDs
-province.data <- read_xlsx("/Users/christianbaehr/GitHub/cambodia_eba_gie/inputData/National Gazetteer 2014.xlsx")[4:5]
+province.data <- read_xlsx("inputdata/National Gazetteer 2014.xlsx")[4:5]
 #pull in Seila data
-seila <- read.csv("~/Box Sync/cambodia_eba_gie/inputData/Seila.csv", stringsAsFactors = F)
+seila <- read.csv("inputdata/pretreatment/Seila.csv", stringsAsFactors = F)
 
 #no AIMS data for the Tboung Khmum province. Ensuring AIMS province names correspond exactly to Gazetteer province 
 #names for merging purposes
@@ -72,7 +81,7 @@ for(i in 1:nrow(province.data)) {
 ### Merging province panel with Seila data ###
 
 #editing Seila column names for percent communes receiving treatment within each province
-names(seila)[10:17] <- gsub("X.", "seila_%communes_", names(seila)[10:17])
+names(seila)[10:17] <- gsub("X.", "seila_pct_communes_", names(seila)[10:17])
 #editing Seila column names for treatment dummies
 names(seila)[2:9] <- gsub("X", "seila_trt_", names(seila)[2:9])
 #editing Seila province names to align with province.data names for easier merging
@@ -82,6 +91,4 @@ seila[1,"provinces"] <- "Siem Reap"
 province.data <- merge(province.data, seila, by="provinces", all = T)
 
 #exporting the province level panel dataset containing both the AIMS and Seila data into Box Sync
-write.csv(province.data, "~/Box Sync/cambodia_eba_gie/processedData/eba_province_panel.csv",
-          row.names = F)
-
+#write.csv(province.data, "processedData/aims_seila_data.csv", row.names = F)
