@@ -1,9 +1,11 @@
 
 setwd("~/box sync/cambodia_eba_gie")
 
+library(dplyr)
 library(spatialEco)
 library(rlist)
 library(sp)
+library(stargazer)
 
 polygons <- readRDS("inputdata/gadm36_KHM_4_sp.rds")
 shape <- as.data.frame(read.csv("inputdata/village_grid_files/village_data.csv", stringsAsFactors = F))
@@ -38,7 +40,7 @@ for(i in 1:length(unique(pid$village.code))) {
                                                                                    temp$activity.type[which.min(temp$actual.end.yr)])
   # storing the count of villages getting treated in each year in the treatment data
   for(j in sort(unique(pid$actual.end.yr))) {
-    treatment[row, grep(paste0("count", j), names(treatment))] <- nrow(temp[temp$actual.end.yr==j,])
+    treatment[row, grep(paste0("count", j), names(treatment))] <- nrow(temp[which(temp$actual.end.yr<=j),])
   }
 }
 
@@ -54,74 +56,8 @@ cdb <- cdb[,c("village.code", "village.name", "province.name", "district.name", 
               "Goat_fami", "Chick_fami", "Duck_fami", "THAT_R_TV", "Z_Fib_R_TV", "Til_R_TV", "Flat_Mult_TV", "Flat_One_TV", 
               "Villa_R_TV")]
 
-# cdb <- cdb[!grepl("n.a.", cdb$commune.name),]
-
-# assessing the FAMILY variable major outliers
-hist(cdb$FAMILY[which(cdb$FAMILY>2000)])
-tail(sort(cdb$FAMILY))
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$FAMILY==6361)]),])
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$FAMILY==6621)]),])
-aggregate(cdb$FAMILY, list(cdb$Year), mean, na.rm=T)
-
-hist(cdb$FAMILY[which(cdb$Year==2008)], ylim = c(0, 10000), xlim = c(0, 8500))
-hist(cdb$FAMILY[which(cdb$Year==2009)], ylim = c(0, 10000), xlim = c(0, 8500))
-hist(cdb$FAMILY[which(cdb$Year==2010)], ylim = c(0, 10000), xlim = c(0, 8500))
-hist(cdb$FAMILY[which(cdb$Year==2011)], ylim = c(0, 10000), xlim = c(0, 8500))
-hist(cdb$FAMILY[which(cdb$Year==2012)], ylim = c(0, 10000), xlim = c(0, 8500))
-hist(cdb$FAMILY[which(cdb$Year==2013)], ylim = c(0, 10000), xlim = c(0, 8500))
-hist(cdb$FAMILY[which(cdb$Year==2014)], ylim = c(0, 10000), xlim = c(0, 8500))
-hist(cdb$FAMILY[which(cdb$Year==2015)], ylim = c(0, 10000), xlim = c(0, 8500))
-hist(cdb$FAMILY[which(cdb$Year==2016)], ylim = c(0, 10000), xlim = c(0, 8500))
-
-# assessing the MAL_TOT variable major outliers
-hist(cdb$MAL_TOT[which(cdb$MAL_TOT>10000)])
-tail(sort(cdb$MAL_TOT))
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$MAL_TOT==12013)]),])
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$MAL_TOT==12043)]),])
-# the observation with value 14112 is clearly a data error. Doesnt affect any variables we are interested
-# in, but if we use MAL_TOT we need to omit these
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$MAL_TOT==14112)]),])
-# the observation with value 14337 is clearly a data error
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$MAL_TOT==14337)]),])
-# the observation with value 26368 is clearly a data error
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$MAL_TOT==26368)]),])
-plot(aggregate(cdb$MAL_TOT, list(cdb$Year), mean, na.rm=T))
-
-# assessing the HRS_ROAD variable major outliers
-hist(cdb$HRS_ROAD[which(cdb$HRS_ROAD>1000)])
-tail(sort(cdb$HRS_ROAD))
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$HRS_ROAD==840)]),])
-# the observation with value 900 is clearly a data error
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$HRS_ROAD==900)]),])
-# all three observations with value 1800 are clearly data errors
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$HRS_ROAD==1800)[1]]),])
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$HRS_ROAD==1800)[2]]),])
-# the observation with value 2400 is clearly a data error
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$HRS_ROAD==2400)]),])
-plot(aggregate(cdb$HRS_ROAD, list(cdb$Year), mean, na.rm=T))
-
-# assessing the Family_Car variable major outliers
-hist(cdb$Family_Car[which(cdb$Family_Car>800)])
-tail(sort(cdb$Family_Car))
-# weird intra-village variation for this subset
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$Family_Car==2455)]),])
-# the observation with value 4113 is clearly a data error
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$Family_Car==4113)]),])
-View(cdb[which(cdb$village.code==cdb$village.code[which(cdb$Family_Car==5307)]),])
-plot(aggregate(cdb$Family_Car, list(cdb$Year), mean, na.rm=T))
-
-hist(cdb$Family_Car[which(cdb$Year==2008)], xlim = c(0, 2000))
-hist(cdb$Family_Car[which(cdb$Year==2009)], xlim = c(0, 2000))
-hist(cdb$Family_Car[which(cdb$Year==2010)], xlim = c(0, 2000))
-hist(cdb$Family_Car[which(cdb$Year==2011)], xlim = c(0, 2000))
-hist(cdb$Family_Car[which(cdb$Year==2012)], xlim = c(0, 2000))
-hist(cdb$Family_Car[which(cdb$Year==2013)], xlim = c(0, 2000))
-hist(cdb$Family_Car[which(cdb$Year==2014)], xlim = c(0, 2000))
-hist(cdb$Family_Car[which(cdb$Year==2015)], xlim = c(0, 2000))
-hist(cdb$Family_Car[which(cdb$Year==2016)], xlim = c(0, 2000))
-
 # randomly select a village and view, across years, the variation in variables of interest
-View(cdb[cdb$village.code==sample(cdb$village.code, 1),])
+# View(cdb[cdb$village.code==sample(cdb$village.code, 1),])
 
 ###################
 
@@ -139,8 +75,6 @@ cdb <- reshape(data = cdb, direction = "wide", v.names = names, timevar = "Year"
 
 # cdb[apply(expand.grid(names, ".", 1992:2007), 1, paste, collapse="")] <- NA
 
-sum(cdb$VillGis %in% treatment$village.code)
-
 cdb.panel <- merge(cdb, treatment, by.x = "village.code", by.y = "village.code")
 
 cdb.panel <- cdb.panel[,!(grepl(paste0(c(2003:2007, "NA"), collapse = "|"), names(cdb.panel)))]
@@ -148,18 +82,18 @@ cdb.panel <- cdb.panel[,!(grepl(paste0(c(2003:2007, "NA"), collapse = "|"), name
 cdb.panel <- reshape(data = cdb.panel, direction = "long", varying = list.append(panel.names, paste0("count", 2008:2016)),
                      idvar = "village.code", timevar = "year")
 
-names(cdb.panel) <- gsub("\\.2008|2008|_x", "", names(cdb.panel))
+names(cdb.panel) <- gsub("\\.2008|2008|\\.x", "", names(cdb.panel))
 names(cdb.panel) <- gsub("\\.", "_", names(cdb.panel))
-cdb.panel <- cdb.panel[,!names(cdb.panel)=="count2017"]
-cdb.panel <- cdb.panel[,!grepl("_y", names(cdb.panel))]
-
+cdb.panel <- cdb.panel[,!grepl("count2017|_y", names(cdb.panel))]
 
 # write.csv(cdb.panel, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/cdb_panel.csv", row.names = F)
 # cdb.panel <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/cdb_panel.csv", stringsAsFactors = F)
 
+cdb.sum.stats <- cdb.panel[,c("Baby_die_Midw", "Baby_die_TBA", "THAT_R_Elec", "Z_Fib_R_Elec", "Til_R_Elec", "Villa_R_Elec")]
+
 ###################
 
-cdb <- cdb[,c("VillGis", grep("THAT_R_Elec|Z_Fib_R_Elec|Til_R_Elec|Flat_Mult_Elec|Flat_One_Elec|Villa_R_Elec", names(cdb), value = T))]
+cdb <- cdb[,c("village.code", grep("THAT_R_Elec|Z_Fib_R_Elec|Til_R_Elec|Flat_Mult_Elec|Flat_One_Elec|Villa_R_Elec", names(cdb), value = T))]
 cdb <- cdb[, !grepl(paste("NA", collapse = "|"), names(cdb))]
 
 grid_1000_matched_data <- read.csv("inputdata/village_grid_files/grid_1000_matched_data.csv",
@@ -189,10 +123,10 @@ names(dataset) <- c(names(grid_1000_matched_data), names(cdb))
 
 for(i in 1:nrow(grid_1000_matched_data)) {
   
-  temp <- cdb[as.character(as.numeric(cdb$VillGis)) %in% as.character(as.numeric(id.list[[i]])),]
+  temp <- cdb[as.character(as.numeric(cdb$village.code)) %in% as.character(as.numeric(id.list[[i]])),]
   
   dataset[i,which(names(grid_1000_matched_data) %in% names(dataset))] <- grid_1000_matched_data[i,]
-  dataset[i,which(names(dataset) %in% names(temp))] <- apply(temp, 2, sum)
+  dataset[i,which(names(dataset) %in% names(temp))] <- apply(temp, 2, sum, na.rm=T)
   
   if(i %% 1000 == 0){cat(i, "of", nrow(grid_1000_matched_data), "\n")}
   
@@ -200,18 +134,38 @@ for(i in 1:nrow(grid_1000_matched_data)) {
 
 names(dataset) <- gsub(".mean", "", names(dataset))
 
-cdb.corr <- reshape(data = dataset, direction = "long", varying = list(paste0("v4composites_calibrated_201709.", 2008:2017),
-                                                                       paste0("THAT_R_Elec.", 2008:2017),
-                                                                       paste0("Z_Fib_R_Elec.", 2008:2017),
-                                                                       paste0("Til_R_Elec.", 2008:2017),
-                                                                       paste0("Flat_Mult_Elec.", 2008:2017),
-                                                                       paste0("Flat_One_Elec.", 2008:2017),
-                                                                       paste0("Villa_R_Elec.", 2008:2017)), 
-                    idvar = "village_id", sep = "\\.", timevar = "year")
+cdb.corr <- reshape(data = dataset, direction = "long", varying = list(paste0("v4composites_calibrated_201709.", 2008:2013),
+                                                                       paste0("THAT_R_Elec.", 2008:2013),
+                                                                       paste0("Z_Fib_R_Elec.", 2008:2013),
+                                                                       paste0("Til_R_Elec.", 2008:2013),
+                                                                       paste0("Flat_Mult_Elec.", 2008:2013),
+                                                                       paste0("Flat_One_Elec.", 2008:2013),
+                                                                       paste0("Villa_R_Elec.", 2008:2013)), 
+                    idvar = "cell.id", sep = "\\.", timevar = "year")
 
 names(cdb.corr) <- gsub(".2008", "", names(cdb.corr))
 names(cdb.corr)[names(cdb.corr)=="v4composites_calibrated_201709"] <- "ntl"
+cdb.corr <- cdb.corr[,!grepl("2014|2015|2016", names(cdb.corr))]
 
+cdb.corr$electricity <- cdb.corr$THAT_R_Elec + cdb.corr$Z_Fib_R_Elec + cdb.corr$Til_R_Elec + cdb.corr$Villa_R_Elec
+x <- as.data.frame.table(tapply(cdb.corr$electricity, INDEX = factor(cdb.corr$cell.id), FUN=sum))
+# x$electric.dummy <- ifelse(x$Freq>0, 1, 0)
+cdb.corr$electric.dummy <- ifelse(cdb.corr$electricity>0, 1, 0)
+# cdb.corr <- merge(cdb.corr, x, by.x="cell.id", by.y="Var1")
 write.csv(cdb.corr, "/Users/christianbaehr/Desktop/cdb_corr.csv", row.names = F)
+cor(cdb.corr$ntl, cdb.corr$electric.dummy)
+
+###################
+
+sum_stats <- read.csv("ProcessedData/cdb_panel_sum_stats.csv", stringsAsFactors = F)
+
+sum_stats$infant_mort <- sum_stats$baby_die_midw + sum_stats$baby_die_tba
+sum_stats$electricity <- sum_stats$that_r_elec + sum_stats$z_fib_r_elec + sum_stats$til_r_elec + sum_stats$villa_r_elec
+sum_stats$electric_dummy <- ifelse(sum_stats$electricity>0, 1, 0)
+
+stargazer(sum_stats[,c("infant_mort","electric_dummy","hh_wealth","pc1")], type="html",
+          covariate.labels=c("Infant Mortality","Electricity Access (dummy)","Unweighted HH Wealth","Weighted HH Wealth"),
+          omit.summary.stat=c("n", "p25", "p75"), title = "CDB Outcomes Summary Statistics", out = "Report/cdb_sum_stats.html")
+
 
 
