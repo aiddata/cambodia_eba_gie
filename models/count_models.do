@@ -1,5 +1,6 @@
 
 set matsize 11000
+cd "/Users/rbtrichler/Box Sync/cambodia_eba_gie"
 cd "/Users/christianbaehr/Box Sync/cambodia_eba_gie"
 
 insheet using "ProcessedData/panel.csv", clear
@@ -117,6 +118,9 @@ est sto c5
 outreg2 using "Results/count_treatment/ntl_continuous.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) ///
 	keep(intra_cell_count border_cell_count)
 
+reghdfe ntl intra_cell_count border_cell_count year##province_number, cluster(commune_number year) absorb(cell_id)
+
+	
 ***
 
 cd "Results/count_treatment"
