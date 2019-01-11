@@ -235,7 +235,7 @@ grid_1000_matched_data <- read.csv("inputdata/village_grid_files/grid_1000_match
 merge_grid_1000_lite <- read.csv("inputdata/village_grid_files/merge_grid_1000_lite.csv",
                                  stringsAsFactors = F)
 grid_1000_matched_data <- merge(grid_1000_matched_data, merge_grid_1000_lite, by = "cell_id")
-grid_1000_matched_data <- grid_1000_matched_data[,-c(7:49, 72:221)]
+grid_1000_matched_data <- grid_1000_matched_data[,-c(7:23, 72:221)]
 
 #merging PID data with GeoQuery extract
 id.list <- list()
@@ -343,7 +343,7 @@ pre.panel$unique.commune.name <- paste(pre.panel$province.name, pre.panel$distri
 
 # editing variable names to make data reshaping easier
 names(pre.panel) <- gsub("v4composites_calibrated_201709.", "ntl_", names(pre.panel)) %>% gsub(".mean", "", .)
-
+names(pre.panel) <- gsub("ltdr_avhrr_yearly_ndvi.", "ndvi_", names(pre.panel))
 # write.csv(pre.panel, "ProcessedData/pre_panel.csv", row.names=F)
 # pre.panel <- read.csv("ProcessedData/pre_panel.csv", stringsAsFactors = F)
 
@@ -384,13 +384,15 @@ pre.panel <- merge(pre.panel, merge_grid_1000_lite.uncalibrated, by = "cell_id")
 names(pre.panel) <- gsub("v4composites.", "ntl_", names(pre.panel))
 names(pre.panel) <- gsub("\\.mean", "_uncalibrated", names(pre.panel))
 
-panel <- reshape(data = pre.panel, direction = "long", varying = list(paste0("ntl_", 1992:2013), 
+panel <- reshape(data = pre.panel, direction = "long", varying = list(paste0("ntl_", 1992:2013),
+                                                                      paste0("ndvi_", 1992:2013),
                                                                       paste0("point.count", 1992:2013),
                                                                       paste0("box.count", 1992:2013),
                                                                       paste0("ntl_", 1992:2013, "_uncalibrated")),
                  idvar = "panel_id", sep = "_", timevar = "year")
 panel <- panel[, !(names(panel) %in% c(paste0("point.count", 2014:2017), paste0("box.count", 2014:2017), "dist_to_water.na",
-                                       "dist_to_groads.na", "id", "panel_id", "village_box_ids", "village_point_ids"))]
+                                       "dist_to_groads.na", "id", "panel_id", "village_box_ids", "village_point_ids",
+                                       paste0("ndvi_", c(1990:1991, 2014:2015))))]
 
 names(panel)[names(panel)=="village.code"] <- "village_code"
 names(panel)[names(panel)=="village.name"] <- "village_name"
@@ -407,6 +409,7 @@ names(panel)[names(panel)=="box.earliest.sector"] <- "border_cell_earliest_secto
 names(panel)[names(panel)=="point.earliest.sector"] <- "intra_cell_earliest_sector"
 names(panel)[names(panel)=="unique.commune.name"] <- "unique_commune_name"
 names(panel)[names(panel)=="ntl_1992"] <- "ntl"
+names(panel)[names(panel)=="ndvi_1992"] <- "ndvi"
 names(panel)[names(panel)=="point.count1992"] <- "intra_cell_count"
 names(panel)[names(panel)=="box.count1992"] <- "border_cell_count"
 names(panel)[names(panel)=="ntl_1992_uncalibrated"] <- "ntl_uncalibrated"
