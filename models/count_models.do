@@ -120,7 +120,45 @@ outreg2 using "Results/count_treatment/ntl_continuous.doc", append noni addtext(
 
 reghdfe ntl intra_cell_count border_cell_count year##province_number, cluster(commune_number year) absorb(cell_id)
 
-	
+***
+
+gen project_count = intra_cell_count + border_cell_count
+egen max_projects = max(project_count), by(cell_id)
+cgmreg ntl project_count, cluster(commune_number year)
+est sto d1
+outreg2 using "Results/count_treatment/additional_models/merged_treatment/ntl_continuous.doc", replace noni nocons ///
+	addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) ///
+	addnote("Notes: DV=NTL. 'intra_cell_count' refers to the treatment variable that only considers villages within a cell. 'border_cell_count' refers to the treatment variable that only considers villages in the eight cells bordering a cell, but NOT within the cell itself.")
+cgmreg ntl project_count, cluster(commune_number year)
+est sto d2
+outreg2 using "Results/count_treatment/additional_models/merged_treatment/ntl_continuous.doc", append noni nocons ///
+	addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N)
+reghdfe ntl project_count, cluster(commune_number year) absorb(year)
+est sto d3
+outreg2 using "Results/count_treatment/additional_models/merged_treatment/ntl_continuous.doc", append noni ///
+	addtext("Year FEs", Y, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) keep(project_count)
+reghdfe ntl project_count i.year, cluster(commune_number year) absorb(cell_id)
+est sto d4
+outreg2 using "Results/count_treatment/additional_models/merged_treatment/ntl_continuous.doc", append noni ///
+	addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", N) keep(project_count)
+reghdfe ntl project_count i.year c.year#i.province_number, cluster(commune_number year) absorb(cell_id)
+est sto d5
+outreg2 using "Results/count_treatment/additional_models/merged_treatment/ntl_continuous.doc", append noni ///
+	addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count)
+
+gen trt1_intra = (intra_cell_count>=1)
+gen trt2_intra = (intra_cell_count>=2)
+gen trt3_intra = (intra_cell_count>=3)
+gen trt4_intra = (intra_cell_count>=4)
+gen trt5_intra = (intra_cell_count>=5)
+reghdfe ntl trt1_intra trt2_intra trt3_intra trt4_intra trt5_intra i.year c.year#i.province_number, cluster(commune_number year) absorb(cell_id)
+
+gen trt1 = (intra_cell_count+border_cell_count>=1)
+gen trt2_4 = (intra_cell_count+border_cell_count>=2)
+gen trt5_9 = (intra_cell_count+border_cell_count>=5)
+gen trt10_ = (intra_cell_count+border_cell_count>=10)
+reghdfe ntl trt1 trt2_4 trt5_9 trt10_ i.year c.year#i.province_number, cluster(commune_number year) absorb(cell_id)
+
 ***
 
 cd "Results/count_treatment"
