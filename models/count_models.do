@@ -120,7 +120,9 @@ outreg2 using "Results/count_treatment/ntl_continuous.doc", append noni addtext(
 
 reghdfe ntl intra_cell_count border_cell_count year##province_number, cluster(commune_number year) absorb(cell_id)
 
-	
+gen trt_2013=0	
+replace trt_2013=1 if border_cell_count>=1 & year==2013
+egen trt_ever=total(trt_2013), by (cell_id)	
 ***
 
 cd "Results/count_treatment"
