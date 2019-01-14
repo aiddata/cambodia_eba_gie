@@ -2,8 +2,8 @@
 # designate the activity type for subsetting the PID data here. The string you pass to the activity.type object must
 # match with one of the values of the activity type variable in the PID data
 # for the output.file.name variable, input the desired name of the .csv file containing the heterogeneous effects panel dataset
-activity.type <- c("Rural Domestic Water Supplies")
-output.file.name <- "panel_rural-domestic-water_only"
+activity.type <- c("Irrigation")
+output.file.name <- "panel_irrigation_only"
 
 # once the correct activity type and output file names have been assigned, you can run the rest of the script
 
@@ -26,7 +26,7 @@ pre.treatment <- pid[which(pid$activity.type %in% activity.type),]
 grid_1000_matched_data <- read.csv("inputdata/village_grid_files/grid_1000_matched_data.csv", stringsAsFactors = F)
 merge_grid_1000_lite <- read.csv("inputdata/village_grid_files/merge_grid_1000_lite.csv", stringsAsFactors = F)
 grid_1000_matched_data <- merge(grid_1000_matched_data, merge_grid_1000_lite, by = "cell_id")
-grid_1000_matched_data <- grid_1000_matched_data[,-c(7:49, 72:221)]
+grid_1000_matched_data <- grid_1000_matched_data[,-c(7:24, 72:221)]
 
 #merging PID data with GeoQuery extract
 id.list <- list()
@@ -43,7 +43,7 @@ for(i in 1:nrow(grid_1000_matched_data)) {
 
 panel.names <- c("village.code", "village.name", "province.name", "district.name", "commune.name", 
                  as.vector(outer(c("box", "point"), c("earliest.end.date", "enddate.type", "earliest.sector.num", "earliest.sector", 
-                                                      paste0("count", 1992:2017)), paste, sep=".")), names(grid_1000_matched_data))
+                                                      paste0("count", 1992:2017)), paste, sep=".")), "cell_id")
 
 pre.panel <- as.data.frame(matrix(NA, nrow = nrow(grid_1000_matched_data), ncol = length(panel.names)))
 names(pre.panel) <- panel.names
@@ -112,7 +112,6 @@ for(i in 1:length(unique(grid_1000_matched_data$cell_id))) {
         as.data.frame(temp.box[, paste0("count", c(2003:2017)[2003:2017<=j])]) %>%
         apply(., 2, sum, na.rm=T) %>%
         sum()}}
-  pre.panel[i, which(names(pre.panel) %in% names(grid_1000_matched_data))] <- grid_1000_matched_data[i,]
   if(is.na(pre.panel$village.code[i])) {
     villages <- c(id.list[[i]], id.list2[[i]]) %>% .[!.==""]
     temp <- shape[shape$village.code==villages[1],]
@@ -122,17 +121,24 @@ for(i in 1:length(unique(grid_1000_matched_data$cell_id))) {
       pre.panel[i, "province.name"] <- temp$province.name
       pre.panel[i, "district.name"] <- temp$district.name
       pre.panel[i, "commune.name"] <- temp$commune.name}}
+  pre.panel$cell_id[i] <- grid_1000_matched_data$cell_id[i]
   if(i %% 1000 == 0){cat(i, "of", nrow(grid_1000_matched_data), "\n")}}
 for(i in grep("count", names(pre.panel))) {pre.panel[which(is.na(pre.panel[,i])), i] <- 0}
+
+pre.panel <- merge(pre.panel, grid_1000_matched_data, by="cell_id")
 
 pre.panel$unique.commune.name <- paste(pre.panel$province.name, pre.panel$district.name, pre.panel$commune.name)
 
 names(pre.panel) <- gsub("v4composites_calibrated_201709.", "ntl_", names(pre.panel)) %>% gsub(".mean", "", .)
+names(pre.panel) <- gsub("ltdr_avhrr_yearly_ndvi.", "ndvi_", names(pre.panel))
 
-panel <- reshape(data = pre.panel, direction = "long", varying = list(paste0("ntl_", 1992:2013), 
+panel <- reshape(data = pre.panel, direction = "long", varying = list(paste0("ntl_", 1992:2013),
+                                                                      paste0("ndvi_", 1992:2013),
                                                                       paste0("point.count", 1992:2013),
                                                                       paste0("box.count", 1992:2013)),
                  idvar = "panel_id", sep = "_", timevar = "year")
+
+panel <- panel[,!grepl("ndvi_1991|ndvi_2014|ndvi_2015", names(panel))]
 
 names(panel)[names(panel)=="village.code"] <- "village_code"
 names(panel)[names(panel)=="village.name"] <- "village_name"
@@ -149,6 +155,7 @@ names(panel)[names(panel)=="box.earliest.sector"] <- "border_cell_earliest_secto
 names(panel)[names(panel)=="point.earliest.sector"] <- "intra_cell_earliest_sector"
 names(panel)[names(panel)=="unique.commune.name"] <- "unique_commune_name"
 names(panel)[names(panel)=="ntl_1992"] <- "ntl"
+names(panel)[names(panel)=="ndvi_1992"] <- "ndvi"
 names(panel)[names(panel)=="point.count1992"] <- "intra_cell_count"
 names(panel)[names(panel)=="box.count1992"] <- "border_cell_count"
 names(panel)[names(panel)=="ntl_1992_uncalibrated"] <- "ntl_uncalibrated"

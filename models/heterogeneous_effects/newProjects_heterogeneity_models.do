@@ -1,7 +1,7 @@
 set matsize 11000
 cd "/Users/christianbaehr/Box Sync/cambodia_eba_gie"
 
-insheet using "ProcessedData/heterogeneous_effects/panel_urban-transport_only.csv", clear
+insheet using "ProcessedData/panel_newProjects.csv", clear
 
 * dropping observations if the commune name variable contains NA values. Keeping these observations
 * creates problematic clusters when clustering errors at commune level
@@ -47,74 +47,70 @@ replace ntl_dummy = 1 if ntl > 0
 egen ntl_binned = cut(ntl), at(0, 10, 20, 30, 40, 50, 60, 70)
 * table ntl_binned, contents(min ntl max ntl)
 
-gen total_count = intra_cell_count + border_cell_count
-egen projects_dummy = sum(total_count), by(cell_id)
-drop if projects_dummy == 0
-
 ***
 
 cgmreg ntl_dummy intra_cell_count, cluster(commune_number year)
 est sto a1
-outreg2 using "Results/heterogeneous_effects/urban_transport/urban-transport_ntl_dummy.doc", replace noni nocons addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) ///
+outreg2 using "Results/heterogeneous_effects/newProjects/ntl_dummy.doc", replace noni nocons addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) ///
 	addnote("Notes: DV={0 if NTL=0, 1 otherwise}. 'intra_cell_count' refers to the treatment variable that only considers villages within a cell. 'border_cell_count' refers to the treatment variable that only considers villages in the eight cells bordering a cell, but NOT within the cell itself.")
 cgmreg ntl_dummy intra_cell_count border_cell_count, cluster(commune_number year)
 est sto a2
-outreg2 using "Results/heterogeneous_effects/urban_transport/urban-transport_ntl_dummy.doc", append noni nocons addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N)
+outreg2 using "Results/heterogeneous_effects/newProjects/ntl_dummy.doc", append noni nocons addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N)
 reghdfe ntl_dummy intra_cell_count border_cell_count, cluster(commune_number year) absorb(year)
 est sto a3
-outreg2 using "Results/heterogeneous_effects/urban_transport/urban-transport_ntl_dummy.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) ///
+outreg2 using "Results/heterogeneous_effects/newProjects/ntl_dummy.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) ///
 	keep(intra_cell_count border_cell_count)
 reghdfe ntl_dummy intra_cell_count border_cell_count i.year, cluster(commune_number year) absorb(cell_id)
 est sto a4
-outreg2 using "Results/heterogeneous_effects/urban_transport/urban-transport_ntl_dummy.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", N) /// 
+outreg2 using "Results/heterogeneous_effects/newProjects/ntl_dummy.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", N) /// 
 	keep(intra_cell_count border_cell_count)
 reghdfe ntl_dummy intra_cell_count border_cell_count i.year c.year#i.province_number, cluster(commune_number year) absorb(cell_id)
 est sto a5
-outreg2 using "Results/heterogeneous_effects/urban_transport/urban-transport_ntl_dummy.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) /// 
+outreg2 using "Results/heterogeneous_effects/newProjects/ntl_dummy.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) /// 
 	keep(intra_cell_count border_cell_count)
 
 * NTL binned dependent variable
 
 cgmreg ntl_binned intra_cell_count, cluster(commune_number year)
 est sto b1
-outreg2 using "Results/heterogeneous_effects/urban_transport/urban-transport_ntl_binned.doc", replace noni nocons addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) ///
+outreg2 using "Results/heterogeneous_effects/newProjects/ntl_binned.doc", replace noni nocons addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) ///
 	addnote("Notes: DV=NTL rounded down to the nearest 10. 'intra_cell_count' refers to the treatment variable that only considers villages within a cell. 'border_cell_count' refers to the treatment variable that only considers villages in the eight cells bordering a cell, but NOT within the cell itself.")
 cgmreg ntl_binned intra_cell_count border_cell_count, cluster(commune_number year)
 est sto b2
-outreg2 using "Results/heterogeneous_effects/urban_transport/urban-transport_ntl_binned.doc", append noni nocons addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N)
+outreg2 using "Results/heterogeneous_effects/newProjects/ntl_binned.doc", append noni nocons addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N)
 reghdfe ntl_binned intra_cell_count border_cell_count, cluster(commune_number year) absorb(year)
 est sto b3
-outreg2 using "Results/heterogeneous_effects/urban_transport/urban-transport_ntl_binned.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) /// 
+outreg2 using "Results/heterogeneous_effects/newProjects/ntl_binned.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) /// 
 	keep(intra_cell_count border_cell_count)
 reghdfe ntl_binned intra_cell_count border_cell_count i.year, cluster(commune_number year) absorb(cell_id)
 est sto b4
-outreg2 using "Results/heterogeneous_effects/urban_transport/urban-transport_ntl_binned.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", N) ///
+outreg2 using "Results/heterogeneous_effects/newProjects/ntl_binned.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", N) ///
 	keep(intra_cell_count border_cell_count)
 reghdfe ntl_binned intra_cell_count border_cell_count i.year c.year#i.province_number, cluster(commune_number year) absorb(cell_id)
 est sto b5
-outreg2 using "Results/heterogeneous_effects/urban_transport/urban-transport_ntl_binned.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) ///
+outreg2 using "Results/heterogeneous_effects/newProjects/ntl_binned.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) ///
 	keep(intra_cell_count border_cell_count)
 
 * NTL continuous dependent variable
 
 cgmreg ntl intra_cell_count, cluster(commune_number year)
 est sto c1
-outreg2 using "Results/heterogeneous_effects/urban_transport/urban-transport_ntl_continuous.doc", replace noni nocons addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) ///
+outreg2 using "Results/heterogeneous_effects/newProjects/ntl_continuous.doc", replace noni nocons addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) ///
 	addnote("Notes: DV=NTL. 'intra_cell_count' refers to the treatment variable that only considers villages within a cell. 'border_cell_count' refers to the treatment variable that only considers villages in the eight cells bordering a cell, but NOT within the cell itself.")
 cgmreg ntl intra_cell_count border_cell_count, cluster(commune_number year)
 est sto c2
-outreg2 using "Results/heterogeneous_effects/urban_transport/urban-transport_ntl_continuous.doc", append noni nocons addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N)
+outreg2 using "Results/heterogeneous_effects/newProjects/ntl_continuous.doc", append noni nocons addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N)
 reghdfe ntl intra_cell_count border_cell_count, cluster(commune_number year) absorb(year)
 est sto c3
-outreg2 using "Results/heterogeneous_effects/urban_transport/urban-transport_ntl_continuous.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) ///
+outreg2 using "Results/heterogeneous_effects/newProjects/ntl_continuous.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) ///
 	keep(intra_cell_count border_cell_count)
 reghdfe ntl intra_cell_count border_cell_count i.year, cluster(commune_number year) absorb(cell_id)
 est sto c4
-outreg2 using "Results/heterogeneous_effects/urban_transport/urban-transport_ntl_continuous.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", N) ///
+outreg2 using "Results/heterogeneous_effects/newProjects/ntl_continuous.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", N) ///
 	keep(intra_cell_count border_cell_count)
 reghdfe ntl intra_cell_count border_cell_count i.year c.year#i.province_number, cluster(commune_number year) absorb(cell_id)
 est sto c5
-outreg2 using "Results/heterogeneous_effects/urban_transport/urban-transport_ntl_continuous.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) ///
+outreg2 using "Results/heterogeneous_effects/newProjects/ntl_continuous.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) ///
 	keep(intra_cell_count border_cell_count)
 
 ***
@@ -122,29 +118,29 @@ outreg2 using "Results/heterogeneous_effects/urban_transport/urban-transport_ntl
 gen project_count = intra_cell_count + border_cell_count
 cgmreg ntl project_count, cluster(commune_number year)
 est sto d1
-outreg2 using "Results/heterogeneous_effects/urban_transport/merged_treatment/ntl_continuous.doc", replace noni nocons ///
+outreg2 using "Results/heterogeneous_effects/newProjects/merged_treatment/ntl_continuous.doc", replace noni nocons ///
 	addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) ///
 	addnote("Notes: DV=NTL. 'intra_cell_count' refers to the treatment variable that only considers villages within a cell. 'border_cell_count' refers to the treatment variable that only considers villages in the eight cells bordering a cell, but NOT within the cell itself.")
 cgmreg ntl project_count, cluster(commune_number year)
 est sto d2
-outreg2 using "Results/heterogeneous_effects/urban_transport/merged_treatment/ntl_continuous.doc", append noni nocons ///
+outreg2 using "Results/heterogeneous_effects/newProjects/merged_treatment/ntl_continuous.doc", append noni nocons ///
 	addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N)
 reghdfe ntl project_count, cluster(commune_number year) absorb(year)
 est sto d3
-outreg2 using "Results/heterogeneous_effects/urban_transport/merged_treatment/ntl_continuous.doc", append noni ///
+outreg2 using "Results/heterogeneous_effects/newProjects/merged_treatment/ntl_continuous.doc", append noni ///
 	addtext("Year FEs", Y, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) keep(project_count)
 reghdfe ntl project_count i.year, cluster(commune_number year) absorb(cell_id)
 est sto d4
-outreg2 using "Results/heterogeneous_effects/urban_transport/merged_treatment/ntl_continuous.doc", append noni ///
+outreg2 using "Results/heterogeneous_effects/newProjects/merged_treatment/ntl_continuous.doc", append noni ///
 	addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", N) keep(project_count)
 reghdfe ntl project_count i.year c.year#i.province_number, cluster(commune_number year) absorb(cell_id)
 est sto d5
-outreg2 using "Results/heterogeneous_effects/urban_transport/merged_treatment/ntl_continuous.doc", append noni ///
+outreg2 using "Results/heterogeneous_effects/newProjects/merged_treatment/ntl_continuous.doc", append noni ///
 	addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count)
 
 ***
 
-cd "Results/heterogeneous_effects/urban_transport"
+cd "Results/heterogeneous_effects/newProjects"
 local txtfiles: dir . files "*.txt"
 foreach txt in `txtfiles' {
     erase `"`txt'"'

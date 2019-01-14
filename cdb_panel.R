@@ -75,7 +75,7 @@ cdb <- reshape(data = cdb, direction = "wide", v.names = names, timevar = "Year"
 
 # cdb[apply(expand.grid(names, ".", 1992:2007), 1, paste, collapse="")] <- NA
 
-cdb.panel <- merge(cdb, treatment, by.x = "village.code", by.y = "village.code")
+cdb.panel <- merge(cdb, treatment, by.x = "village.code", by.y = "village.code", all.x = T)
 
 cdb.panel <- cdb.panel[,!(grepl(paste0(c(2003:2007, "NA"), collapse = "|"), names(cdb.panel)))]
 

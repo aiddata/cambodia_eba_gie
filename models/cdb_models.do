@@ -19,6 +19,10 @@ encode unique_commune_name, gen(commune_number)
 
 * rename treatment variable
 rename count treatment_count
+replace treatment_count = "0" if treatment_count == "NA"
+gen count = treatment_count
+drop treatment_count
+encode count, gen(treatment_count)
 
 * local macro of all variables in analysis
 unab varlist: family mal_tot fem_tot km_road km_p_sch baby_die_midw baby_die_tba thatch_r ///
@@ -76,7 +80,7 @@ egen hh_wealth = rowmean(wealthvar_electricity wealthvar_non_motor_boat wealthva
 
 cgmreg electric_dummy treatment_count, cluster(commune_number year)
 est sto a1
-outreg2 using "Results/cdb_outcomes/electricity_outcome.doc", replace noni addtext("Year FEs", N, "Village FEs", N)
+outreg2 using "Results/cdb_outcomes/electricity_outcome.doc", replace noni nocons addtext("Year FEs", N, "Village FEs", N)
 reghdfe electric_dummy treatment_count, cluster(commune_number year) absorb(year)
 est sto a2
 outreg2 using "Results/cdb_outcomes/electricity_outcome.doc", append noni addtext("Year FEs", Y, "Village FEs", N) keep(treatment_count)
@@ -86,7 +90,7 @@ outreg2 using "Results/cdb_outcomes/electricity_outcome.doc", append noni addtex
 
 cgmreg infant_mort treatment_count, cluster(commune_number year)
 est sto b1
-outreg2 using "Results/cdb_outcomes/infant_mortality_outcome.doc", replace noni addtext("Year FEs", N, "Village FEs", N)
+outreg2 using "Results/cdb_outcomes/infant_mortality_outcome.doc", replace noni nocons addtext("Year FEs", N, "Village FEs", N)
 reghdfe infant_mort treatment_count, cluster(commune_number year) absorb(year)
 est sto b2
 outreg2 using "Results/cdb_outcomes/infant_mortality_outcome.doc", append noni addtext("Year FEs", Y, "Village FEs", N) keep(treatment_count)
@@ -96,7 +100,7 @@ outreg2 using "Results/cdb_outcomes/infant_mortality_outcome.doc", append noni a
 	
 cgmreg hh_wealth treatment_count, cluster(commune_number year)
 est sto d1
-outreg2 using "Results/cdb_outcomes/household_wealth_outcome.doc", replace noni addtext("Year FEs", N, "Village FEs", N)
+outreg2 using "Results/cdb_outcomes/household_wealth_outcome.doc", replace noni nocons addtext("Year FEs", N, "Village FEs", N)
 reghdfe hh_wealth treatment_count, cluster(commune_number year) absorb(year)
 est sto d2
 outreg2 using "Results/cdb_outcomes/household_wealth_outcome.doc", append noni addtext("Year FEs", Y, "Village FEs", N) keep(treatment_count)
@@ -106,7 +110,7 @@ outreg2 using "Results/cdb_outcomes/household_wealth_outcome.doc", append noni a
 
 cgmreg pc1 treatment_count, cluster(commune_number year)
 est sto e1
-outreg2 using "Results/cdb_outcomes/princ_comp_1_outcome.doc", replace noni addtext("Year FEs", N, "Village FEs", N)
+outreg2 using "Results/cdb_outcomes/princ_comp_1_outcome.doc", replace noni nocons addtext("Year FEs", N, "Village FEs", N)
 reghdfe pc1 treatment_count, cluster(commune_number year) absorb(year)
 est sto e2
 outreg2 using "Results/cdb_outcomes/princ_comp_1_outcome.doc", append noni addtext("Year FEs", Y, "Village FEs", N) keep(treatment_count)
@@ -116,7 +120,7 @@ outreg2 using "Results/cdb_outcomes/princ_comp_1_outcome.doc", append noni addte
 
 cgmreg pc2 treatment_count, cluster(commune_number year)
 est sto f1
-outreg2 using "Results/cdb_outcomes/princ_comp_2_outcome.doc", replace noni addtext("Year FEs", N, "Village FEs", N)
+outreg2 using "Results/cdb_outcomes/princ_comp_2_outcome.doc", replace noni nocons addtext("Year FEs", N, "Village FEs", N)
 reghdfe pc2 treatment_count, cluster(commune_number year) absorb(year)
 est sto f2
 outreg2 using "Results/cdb_outcomes/princ_comp_2_outcome.doc", append noni addtext("Year FEs", Y, "Village FEs", N) keep(treatment_count)
@@ -126,7 +130,7 @@ outreg2 using "Results/cdb_outcomes/princ_comp_2_outcome.doc", append noni addte
 
 cgmreg pc3 treatment_count, cluster(commune_number year)
 est sto g1
-outreg2 using "Results/cdb_outcomes/princ_comp_3_outcome.doc", replace noni addtext("Year FEs", N, "Village FEs", N) keep(treatment_count)
+outreg2 using "Results/cdb_outcomes/princ_comp_3_outcome.doc", replace noni nocons addtext("Year FEs", N, "Village FEs", N) keep(treatment_count)
 reghdfe pc3 treatment_count, cluster(commune_number year) absorb(year)
 est sto g2
 outreg2 using "Results/cdb_outcomes/princ_comp_3_outcome.doc", append noni addtext("Year FEs", Y, "Village FEs", N) keep(treatment_count)
@@ -179,7 +183,7 @@ egen hh_wealth_win = rowmean(wealthvar_electricity_win wealthvar_non_motor_boat_
 
 cgmreg electric_dummy_win treatment_count, cluster(commune_number year)
 est sto h1
-outreg2 using "Results/cdb_outcomes/count_winsor/electricity_outcome.doc", replace noni addtext("Year FEs", N, "Village FEs", N)
+outreg2 using "Results/cdb_outcomes/count_winsor/electricity_outcome.doc", replace noni nocons addtext("Year FEs", N, "Village FEs", N)
 reghdfe electric_dummy_win treatment_count, cluster(commune_number year) absorb(year)
 est sto h2
 outreg2 using "Results/cdb_outcomes/count_winsor/electricity_outcome.doc", append noni addtext("Year FEs", Y, "Village FEs", N) keep(treatment_count)
@@ -189,7 +193,7 @@ outreg2 using "Results/cdb_outcomes/count_winsor/electricity_outcome.doc", appen
 
 cgmreg infant_mort_win treatment_count, cluster(commune_number year)
 est sto j1
-outreg2 using "Results/cdb_outcomes/count_winsor/infant_mortality_outcome.doc", replace noni addtext("Year FEs", N, "Village FEs", N)
+outreg2 using "Results/cdb_outcomes/count_winsor/infant_mortality_outcome.doc", replace noni nocons addtext("Year FEs", N, "Village FEs", N)
 reghdfe infant_mort_win treatment_count, cluster(commune_number year) absorb(year)
 est sto j2
 outreg2 using "Results/cdb_outcomes/count_winsor/infant_mortality_outcome.doc", append noni addtext("Year FEs", Y, "Village FEs", N) keep(treatment_count)
@@ -199,7 +203,7 @@ outreg2 using "Results/cdb_outcomes/count_winsor/infant_mortality_outcome.doc", 
 
 cgmreg hh_wealth_win treatment_count, cluster(commune_number year)
 est sto k1
-outreg2 using "Results/cdb_outcomes/count_winsor/household_wealth_outcome.doc", replace noni addtext("Year FEs", N, "Village FEs", N)
+outreg2 using "Results/cdb_outcomes/count_winsor/household_wealth_outcome.doc", replace noni nocons addtext("Year FEs", N, "Village FEs", N)
 reghdfe hh_wealth_win treatment_count, cluster(commune_number year) absorb(year)
 est sto k2
 outreg2 using "Results/cdb_outcomes/count_winsor/household_wealth_outcome.doc", append noni addtext("Year FEs", Y, "Village FEs", N) keep(treatment_count)
@@ -209,7 +213,7 @@ outreg2 using "Results/cdb_outcomes/count_winsor/household_wealth_outcome.doc", 
 
 cgmreg pc1_win treatment_count, cluster(commune_number year)
 est sto m1
-outreg2 using "Results/cdb_outcomes/count_winsor/princ_comp_1_outcome.doc", replace noni addtext("Year FEs", N, "Village FEs", N)
+outreg2 using "Results/cdb_outcomes/count_winsor/princ_comp_1_outcome.doc", replace noni nocons addtext("Year FEs", N, "Village FEs", N)
 reghdfe pc1_win treatment_count, cluster(commune_number year) absorb(year)
 est sto m2
 outreg2 using "Results/cdb_outcomes/count_winsor/princ_comp_1_outcome.doc", append noni addtext("Year FEs", Y, "Village FEs", N) keep(treatment_count)
@@ -223,10 +227,12 @@ foreach txt in `txtfiles' {
     erase `"`txt'"'
 }
 
-
 *******************
 
 cd ..
+
+replace earliest_end_date="." if earliest_end_date=="NA"
+destring earliest_end_date, replace
 
 gen time_to_trt = year - earliest_end_date
 qui sum time_to_trt, d
@@ -250,7 +256,7 @@ la values time_to_trt_p time_to_trt_p
 unab varlist: electric_dummy infant_mort pc1
 foreach i of local varlist {
 	reghdfe `i' i.time_to_trt_p i.year, cluster(commune_number year) absorb(village_code)
-	coefplot, drop(63.time_to_trt_p || *.year) xline(10) yline(0) vertical omit ///
+	coefplot, drop(61.time_to_trt_p || 62.time_to_trt_p || 63.time_to_trt_p || *.year) xline(10) yline(0) vertical omit ///
 		recast(line) color(blue) ciopts(recast(rline) color(blue) lp(dash)) graphregion(color(white)) ///
 		bgcolor(white) xtitle("Years to Treatment") ytitle("Treatment effects on" `i')
 	graph export `"time_to_trt/trt_byyear_`i'.png"', replace
@@ -260,7 +266,7 @@ foreach i of local varlist {
 
 cgmreg electric_dummy time_to_trt, cluster(commune_number year)
 est sto n1
-outreg2 using "time_to_trt/electricity_outcome.doc", replace noni addtext("Year FEs", N, "Village FEs", N)
+outreg2 using "time_to_trt/electricity_outcome.doc", replace noni nocons addtext("Year FEs", N, "Village FEs", N)
 reghdfe electric_dummy time_to_trt, cluster(commune_number year) absorb(year)
 est sto n2
 outreg2 using "time_to_trt/electricity_outcome.doc", append noni addtext("Year FEs", Y, "Village FEs", N) keep(time_to_trt)
@@ -270,7 +276,7 @@ outreg2 using "time_to_trt/electricity_outcome.doc", append noni addtext("Year F
 
 cgmreg infant_mort time_to_trt, cluster(commune_number year)
 est sto p1
-outreg2 using "time_to_trt/infant_mortality_outcome.doc", replace noni addtext("Year FEs", N, "Village FEs", N)
+outreg2 using "time_to_trt/infant_mortality_outcome.doc", replace noni nocons addtext("Year FEs", N, "Village FEs", N)
 reghdfe infant_mort time_to_trt, cluster(commune_number year) absorb(year)
 est sto p2
 outreg2 using "time_to_trt/infant_mortality_outcome.doc", append noni addtext("Year FEs", Y, "Village FEs", N) keep(time_to_trt)
@@ -280,7 +286,7 @@ outreg2 using "time_to_trt/infant_mortality_outcome.doc", append noni addtext("Y
 	
 cgmreg hh_wealth time_to_trt, cluster(commune_number year)
 est sto q1
-outreg2 using "time_to_trt/household_wealth_outcome.doc", replace noni addtext("Year FEs", N, "Village FEs", N)
+outreg2 using "time_to_trt/household_wealth_outcome.doc", replace noni nocons addtext("Year FEs", N, "Village FEs", N)
 reghdfe hh_wealth time_to_trt, cluster(commune_number year) absorb(year)
 est sto q2
 outreg2 using "time_to_trt/household_wealth_outcome.doc", append noni addtext("Year FEs", Y, "Village FEs", N) keep(time_to_trt)
@@ -290,7 +296,7 @@ outreg2 using "time_to_trt/household_wealth_outcome.doc", append noni addtext("Y
 
 cgmreg pc1 time_to_trt, cluster(commune_number year)
 est sto r1
-outreg2 using "time_to_trt/princ_comp_1_outcome.doc", replace noni addtext("Year FEs", N, "Village FEs", N)
+outreg2 using "time_to_trt/princ_comp_1_outcome.doc", replace noni nocons addtext("Year FEs", N, "Village FEs", N)
 reghdfe pc1 time_to_trt, cluster(commune_number year) absorb(year)
 est sto r2
 outreg2 using "time_to_trt/princ_comp_1_outcome.doc", append noni addtext("Year FEs", Y, "Village FEs", N) keep(time_to_trt)
@@ -300,7 +306,7 @@ outreg2 using "time_to_trt/princ_comp_1_outcome.doc", append noni addtext("Year 
 
 cgmreg pc2 time_to_trt, cluster(commune_number year)
 est sto s1
-outreg2 using "time_to_trt/princ_comp_2_outcome.doc", replace noni addtext("Year FEs", N, "Village FEs", N)
+outreg2 using "time_to_trt/princ_comp_2_outcome.doc", replace noni nocons addtext("Year FEs", N, "Village FEs", N)
 reghdfe pc2 time_to_trt, cluster(commune_number year) absorb(year)
 est sto s2
 outreg2 using "time_to_trt/princ_comp_2_outcome.doc", append noni addtext("Year FEs", Y, "Village FEs", N) keep(time_to_trt)
@@ -310,7 +316,7 @@ outreg2 using "time_to_trt/princ_comp_2_outcome.doc", append noni addtext("Year 
 
 cgmreg pc3 time_to_trt, cluster(commune_number year)
 est sto t1
-outreg2 using "time_to_trt/princ_comp_3_outcome.doc", replace noni addtext("Year FEs", N, "Village FEs", N) keep(time_to_trt)
+outreg2 using "time_to_trt/princ_comp_3_outcome.doc", replace noni nocons addtext("Year FEs", N, "Village FEs", N) keep(time_to_trt)
 reghdfe pc3 time_to_trt, cluster(commune_number year) absorb(year)
 est sto t2
 outreg2 using "time_to_trt/princ_comp_3_outcome.doc", append noni addtext("Year FEs", Y, "Village FEs", N) keep(time_to_trt)
