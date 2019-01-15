@@ -120,12 +120,7 @@ outreg2 using "Results/count_treatment/ntl_continuous.doc", append noni addtext(
 
 reghdfe ntl intra_cell_count border_cell_count year##province_number, cluster(commune_number year) absorb(cell_id)
 
-<<<<<<< HEAD
-gen trt_2013=0	
-replace trt_2013=1 if border_cell_count>=1 & year==2013
-egen trt_ever=total(trt_2013), by (cell_id)	
-=======
-***
+* gen project_count for single merged count
 
 gen project_count = intra_cell_count + border_cell_count
 egen max_projects = max(project_count), by(cell_id)
@@ -151,6 +146,8 @@ est sto d5
 outreg2 using "Results/count_treatment/additional_models/merged_treatment/ntl_continuous.doc", append noni ///
 	addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count)
 
+* gen cell count categories
+	
 gen trt1_intra = (intra_cell_count>=1)
 gen trt2_intra = (intra_cell_count>=2)
 gen trt3_intra = (intra_cell_count>=3)
@@ -164,7 +161,7 @@ gen trt5_9 = (intra_cell_count+border_cell_count>=5)
 gen trt10_ = (intra_cell_count+border_cell_count>=10)
 reghdfe ntl trt1 trt2_4 trt5_9 trt10_ i.year c.year#i.province_number, cluster(commune_number year) absorb(cell_id)
 
->>>>>>> 38d3431fe0d92be38ac6532955ef79b66a653abc
+
 ***
 
 cd "Results/count_treatment"
