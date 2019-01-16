@@ -38,6 +38,22 @@ replace intra_cell_treatment = 1 if year >= intra_cell_earliest_enddate
 gen border_cell_treatment = 0
 replace border_cell_treatment = 1 if year >= border_cell_earliest_enddate
 
+* gen earliest project end_date
+gen earliest_end= border_cell_earliest_enddate 
+replace earliest_end = intra_cell_earliest_enddate if intra_cell_earliest_enddate<border_cell_earliest_enddate
+
+*gen ntl dummy that reflects if lit before 1992
+gen ntl_dummy_pre92 = 0
+*only equals 1 if lit before 1992
+replace ntl_dummy_pre92=1 if ntl>0 & year==1992 
+egen ntl_lit_pre92 = max(ntl_dummy_pre92), by(cell_id)
+
+* gen dummy that reflects if become lit between 1992-2002
+gen ntl_dummy_pre03=0
+*only equals 1 if lit 2002 or earlier
+replace ntl_dummy_pre03=1 if ntl>0 & year==2002
+egen ntl_lit_pre03 = max(ntl_dummy_pre03), by(cell_id)
+
 * generating dependent variables
 
 * ntl dummy
@@ -49,7 +65,7 @@ replace ntl_dummy = 1 if ntl > 0
 egen ntl_binned = cut(ntl), at(0, 10, 20, 30, 40, 50, 60, 70)
 * table ntl_binned, contents(min ntl max ntl)
 
-***
+*** MODELS ****
 
 * bysort cell_id (year): gen ntl_pre_baseline = ntl[11]
 * xtile ntl_baseline = ntl_pre_baseline, n(4)
@@ -118,7 +134,12 @@ est sto c5
 outreg2 using "Results/count_treatment/ntl_continuous.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) ///
 	keep(intra_cell_count border_cell_count)
 
+* Additional NTL continuous models
 reghdfe ntl intra_cell_count border_cell_count year##province_number, cluster(commune_number year) absorb(cell_id)
+
+reghdfe ntl intra_cell_count border_cell_count i.year c.year#i.province_number if ntl_lit_pre03==1, cluster(commune_number year) absorb(cell_id)
+reghdfe ntl intra_cell_count border_cell_count i.year c.year#i.province_number if ntl_lit_pre03==0, cluster(commune_number year) absorb(cell_id)
+
 
 * gen project_count for single merged count
 
@@ -160,6 +181,19 @@ gen trt2_4 = (intra_cell_count+border_cell_count>=2)
 gen trt5_9 = (intra_cell_count+border_cell_count>=5)
 gen trt10_ = (intra_cell_count+border_cell_count>=10)
 reghdfe ntl trt1 trt2_4 trt5_9 trt10_ i.year c.year#i.province_number, cluster(commune_number year) absorb(cell_id)
+
+* ntl pre-trend regressions
+
+* using trends
+reg earliest_end ntlpre_9202 i.province_number if year==2002
+reg intra_cell_earliest_enddate ntlpre_9202 i.province_number if year==2002
+
+reghdfe earliest_end ntlpre_9202 if year==2002, absorb (commune_number)
+
+* using ntl_dummy
+reghdfe earliest_end ntl_dummy if year==2002, absorb (commune_number)
+reghdfe earliest_end ntl_dummy if year==2002 & ntl_lit_pre92==0, absorb (commune_number)
+
 
 
 ***

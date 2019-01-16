@@ -414,5 +414,26 @@ names(panel)[names(panel)=="point.count1992"] <- "intra_cell_count"
 names(panel)[names(panel)=="box.count1992"] <- "border_cell_count"
 names(panel)[names(panel)=="ntl_1992_uncalibrated"] <- "ntl_uncalibrated"
 
-# write.csv(panel, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel.csv", row.names = F)
-# panel <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel.csv", stringsAsFactors = F)
+# Create pre-trend for each cell's ntl values from 1992-2002
+#subset panel to only include 1992-2001
+pre_panel<-panel[panel$year<=11,]
+
+obj <-pre_panel %>% split(.$cell_id) %>% lapply (lm, formula=formula(ntl~year))
+#extract coefficients
+obj_coefficients <- as.data.frame(t(lapply(obj, function(x)as.numeric(x[1]$coefficients[2]))))
+#transpose so row number = cell_id and format
+obj_coefficients1<-as.data.frame(t(obj_coefficients))
+obj_coefficients1$rownumber <- as.numeric(rownames(obj_coefficients1))
+obj_coeff<-obj_coefficients1
+names(obj_coeff)[names(obj_coeff)=="V1"]="ntlpre_9202"
+names(obj_coeff)[names(obj_coeff)=="rownumber"]="cell_id"
+obj_coeff$ntlpre_9202<-as.numeric(obj_coeff$ntlpre_9202)
+#merge trend for each cell_id back in to full panel dataset
+panel<-merge(panel,obj_coeff,by="cell_id")
+
+## Write Panel Data File
+#write.csv(panel, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel.csv", row.names = F)
+#panel <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel.csv", stringsAsFactors = F)
+
+
+
