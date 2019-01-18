@@ -15,6 +15,7 @@ library(stringr)
 library(sp)
 library(spatialEco)
 library(rlist)
+library(rgdal)
 
 # the commented out code merges the three PID datasets and assigns a common Activity Type index to the PID data
 # it then writes out a complete PID dataset that can be read in instead of re-running this code each time
@@ -235,6 +236,35 @@ grid_1000_matched_data <- read.csv("inputdata/village_grid_files/grid_1000_match
 merge_grid_1000_lite <- read.csv("inputdata/village_grid_files/merge_grid_1000_lite.csv",
                                  stringsAsFactors = F)
 grid_1000_matched_data <- merge(grid_1000_matched_data, merge_grid_1000_lite, by = "cell_id")
+
+poly <- readOGR("/Users/christianbaehr/box sync/cambodia_eba_gie/inputdata/village_grid_files/grid_1000_filter_lite.geojson")
+poly2 <- as.data.frame(point.in.poly(x=spatial.data, y=poly))
+poly2 <- poly2[,c("VILL_CODE", "cell_id")]
+
+a <- as.data.frame(unique(poly2$cell_id))
+names(a) <- "cell_id"
+a$point_id <- NA
+for(i in 1:nrow(a)) {
+  temp <- poly2[poly2$cell_id==a$cell_id[i],]
+  
+  if(nrow(temp)==1) {
+    a$point_id[i] <- temp$VILL_CODE
+  } 
+  else if(nrow(temp)>1) {
+    temp2 <- temp$VILL_CODE
+    a$point_id[i] <- paste(temp2, collapse = "|")
+  } 
+  else {
+    a$point_id[i] <- NA
+  }
+}
+
+b <- merge(grid_1000_matched_data, a, by="cell_id", all.x=T)
+b$village_point_ids <- b$point_id
+b$village_point_ids[is.na(b$village_point_ids)] <- ""
+b <- b[,!names(b) %in% "point_id"]
+grid_1000_matched_data <- b
+
 grid_1000_matched_data <- grid_1000_matched_data[,-c(7:23, 72:221)]
 
 #merging PID data with GeoQuery extract
@@ -385,13 +415,13 @@ names(pre.panel) <- gsub("v4composites.", "ntl_", names(pre.panel))
 names(pre.panel) <- gsub("\\.mean", "_uncalibrated", names(pre.panel))
 
 panel <- reshape(data = pre.panel, direction = "long", varying = list(paste0("ntl_", 1992:2013),
-                                                                      paste0("ndvi_", 1992:2013),
+                                                                      #paste0("ndvi_", 1992:2013),
                                                                       paste0("point.count", 1992:2013),
                                                                       paste0("box.count", 1992:2013),
                                                                       paste0("ntl_", 1992:2013, "_uncalibrated")),
                  idvar = "panel_id", sep = "_", timevar = "year")
 panel <- panel[, !(names(panel) %in% c(paste0("point.count", 2014:2017), paste0("box.count", 2014:2017), "dist_to_water.na",
-                                       "dist_to_groads.na", "id", "panel_id", "village_box_ids", "village_point_ids",
+                                       "dist_to_groads.na", "id", "panel_id",
                                        paste0("ndvi_", c(1990:1991, 2014:2015))))]
 
 names(panel)[names(panel)=="village.code"] <- "village_code"
@@ -434,6 +464,26 @@ panel<-merge(panel,obj_coeff,by="cell_id")
 ## Write Panel Data File
 #write.csv(panel, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel.csv", row.names = F)
 #panel <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel.csv", stringsAsFactors = F)
+
+# grid_1000_matched_data <- grid_1000_matched_data[,c("cell_id", "village_point_ids", "village_box_ids")]
+# 
+# panel <- merge(panel, grid_1000_matched_data, by="cell_id")
+# panel$village_point_ids[panel$village_point_ids==""] <- NA
+
+panel$n_vill <- apply(panel[,c("village_point_ids", "village_box_ids")], 1, paste, collapse="|")
+panel$vills <- str_count(gsub("NA\\|", "", panel$n_vill), "\\|")+1
+
+###
+
+cdb <- read.csv("/Users/christianbaehr/box sync/cambodia_eba_gie/inputdata/CDB_merged_final.csv", stringsAsFactors = F)
+
+cdb$unique_id <- apply(cdb[,c("VillGis", "Year")], 1, paste, collapse="|")
+panel$year_temp=panel$year+1991
+panel$unique_id <- apply(panel[,c("village_code", "year_temp")], 1, paste, collapse="|")
+
+merged_data <- merge(cdb, panel, by="unique_id")
+
+write.csv(merged_data, "/Users/christianbaehr/Box Sync/cambodia_eba_gie/processeddata/ntl_cdb_merge.csv", row.names = F)
 
 
 

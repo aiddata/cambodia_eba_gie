@@ -54,6 +54,7 @@ gen ntl_dummy_pre03=0
 replace ntl_dummy_pre03=1 if ntl>0 & year==2002
 egen ntl_lit_pre03 = max(ntl_dummy_pre03), by(cell_id)
 
+
 * generating dependent variables
 
 * ntl dummy
@@ -66,6 +67,12 @@ egen ntl_binned = cut(ntl), at(0, 10, 20, 30, 40, 50, 60, 70)
 * table ntl_binned, contents(min ntl max ntl)
 
 *** MODELS ****
+gen project_count = intra_cell_count + border_cell_count
+egen max_projects = max(project_count), by(cell_id)
+
+* outsheet using "Report/ntl_sum_stats.csv", comma
+
+***
 
 * bysort cell_id (year): gen ntl_pre_baseline = ntl[11]
 * xtile ntl_baseline = ntl_pre_baseline, n(4)
@@ -134,6 +141,10 @@ est sto c5
 outreg2 using "Results/count_treatment/ntl_continuous.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) ///
 	keep(intra_cell_count border_cell_count)
 
+reghdfe ntl intra_cell_count border_cell_count year##province_number, cluster(commune_number year) absorb(cell_id)
+
+***
+
 * Additional NTL continuous models
 reghdfe ntl intra_cell_count border_cell_count year##province_number, cluster(commune_number year) absorb(cell_id)
 
@@ -142,6 +153,7 @@ reghdfe ntl intra_cell_count border_cell_count i.year c.year#i.province_number i
 
 
 * gen project_count for single merged count
+***
 
 gen project_count = intra_cell_count + border_cell_count
 egen max_projects = max(project_count), by(cell_id)
@@ -167,6 +179,7 @@ est sto d5
 outreg2 using "Results/count_treatment/additional_models/merged_treatment/ntl_continuous.doc", append noni ///
 	addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count)
 
+	
 * gen cell count categories
 	
 gen trt1_intra = (intra_cell_count>=1)
@@ -180,26 +193,124 @@ gen trt1 = (intra_cell_count+border_cell_count>=1)
 gen trt2_4 = (intra_cell_count+border_cell_count>=2)
 gen trt5_9 = (intra_cell_count+border_cell_count>=5)
 gen trt10_ = (intra_cell_count+border_cell_count>=10)
+***
+
+gen trt1 = (project_count>=1)
+gen trt2_4 = (project_count>=2)
+gen trt5_9 = (project_count>=5)
+gen trt10_ = (project_count>=10)
+
+gen dummy_2008 = (year>=2008)
+gen intra_interact_2008 = intra_cell_count*dummy_2008
+gen border_interact_2008 = border_cell_count*dummy_2008
+gen project_interact_2008 = project_count*dummy_2008
+
+gen trt1_interact_2008 = trt1*dummy_2008
+gen trt2_4_interact_2008 = trt2_4*dummy_2008
+gen trt5_9_interact_2008 = trt5_9*dummy_2008
+gen trt10_interact_2008 = trt10_*dummy_2008
+
+gen proj_count_interact = project_count*vills
+
+cgmreg ntl project_count, cluster(commune_number year)
+outreg2 using "Report/main_models.doc", replace noni nocons ///
+	addtext("Year FEs", N, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N)
+reghdfe ntl project_count, cluster(commune_number year) absorb(year)
+outreg2 using "Report/main_models.doc", append noni ///
+	addtext("Year FEs", Y, "Grid cell FEs", N, "Lin. Time Trends by Prov.", N) keep(project_count)
+reghdfe ntl project_count i.year, cluster(commune_number year) absorb(cell_id)
+outreg2 using "Report/main_models.doc", append noni ///
+	addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", N) keep(project_count)
+reghdfe ntl project_count i.year c.year#i.province_number, cluster(commune_number year) absorb(cell_id)
+outreg2 using "Report/main_models.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) ///
+	keep(project_count)
+reghdfe ntl project_count project_interact_2008 i.year ///
+	c.year#i.province_number, cluster(commune_number year) absorb(cell_id)
+outreg2 using "Report/main_models.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) ///
+	keep(project_count project_interact_2008)
 reghdfe ntl trt1 trt2_4 trt5_9 trt10_ i.year c.year#i.province_number, cluster(commune_number year) absorb(cell_id)
+outreg2 using "Report/main_models.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) ///
+	keep(trt1 trt2_4 trt5_9 trt10_)
+reghdfe ntl trt1 trt2_4 trt5_9 trt10_ trt1_interact_2008 trt2_4_interact_2008 trt5_9_interact_2008 ///
+	trt10_interact_2008 i.year c.year#i.province_number, cluster(commune_number year) absorb(cell_id)
+outreg2 using "Report/main_models.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) ///
+	keep(trt1 trt2_4 trt5_9 trt10_ trt1_interact_2008 trt2_4_interact_2008 trt5_9_interact_2008 trt10_interact_2008)
+reghdfe ntl trt1 trt2_4 trt5_9 trt10_ proj_count_interact i.year c.year#i.province_number, cluster(commune_number year) absorb(cell_id)
+outreg2 using "Report/main_models.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) ///
+	keep(trt1 trt2_4 trt5_9 trt10_ proj_count_interact)
+
+erase "Report/main_models.txt"
+
+***
 
 * ntl pre-trend regressions
+gen earliest_end_date = intra_cell_earliest_enddate if intra_cell_earliest_enddate<border_cell_earliest_enddate
+replace earliest_end_date = border_cell_earliest_enddate if intra_cell_earliest_enddate>border_cell_earliest_enddate
 
 * using trends
 reg earliest_end ntlpre_9202 i.province_number if year==2002
 reg intra_cell_earliest_enddate ntlpre_9202 i.province_number if year==2002
+gen time_to_trt = year - earliest_end_date
+qui sum time_to_trt, d
+loc min = `r(min)'
+loc max = `r(max)'
+egen time_to_trt_p = cut(time_to_trt), at(-20(1)20)
 
 reghdfe earliest_end ntlpre_9202 if year==2002, absorb (commune_number)
+levelsof time_to_trt_p, loc(levels) sep()
+
+foreach l of local levels{
+	local j = `l' + 50
+	local label `"`label' `j' "`l'" "'
+	}
 
 * using ntl_dummy
 reghdfe earliest_end ntl_dummy if year==2002, absorb (commune_number)
-reghdfe earliest_end ntl_dummy if year==2002 & ntl_lit_pre92==0, absorb (commune_number)
+reghdfe earliest_end ntl_dummy if year==2002 & ntl_lit_pre92==0, absorb (commune_number)	
 
+cap la drop time_to_trt_p `label'
+la def time_to_trt_p `label', replace
 
+replace time_to_trt_p = time_to_trt_p + 50
+la values time_to_trt_p time_to_trt_p
+
+reghdfe ntl i.time_to_trt_p i.year, cluster(commune_number year) absorb(cell_id)
+outreg2 using "Report/time_to_trt/NTL", replace excel ci
 
 ***
 
+gen time_trend = c.year if year<=2002
+
+collapse (min) earliest_end_date province_number, by(cell_id year)
+
+
+* gen treatment = (year >= earliest_end_date)
+
+drop if earliest_end_date > 2016
+ 
+reg time_trend earliest_end_date i.province_number
+
+***
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
 cd "Results/count_treatment"
-local txtfiles: dir . files "*.txt"
+local txtfiles: dir . files "ntl_continuous.doc"
 foreach txt in `txtfiles' {
     erase `"`txt'"'
 }
