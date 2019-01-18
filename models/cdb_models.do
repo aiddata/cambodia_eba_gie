@@ -18,11 +18,16 @@ replace unique_commune_name = "" if unique_commune_name == "NA"
 encode unique_commune_name, gen(commune_number)
 
 * rename treatment variable
+
+replace count = "0" if count == "NA"
+destring count, replace
 rename count treatment_count
-replace treatment_count = "0" if treatment_count == "NA"
-gen count = treatment_count
-drop treatment_count
-encode count, gen(treatment_count)
+
+* rename count treatment_count
+* replace treatment_count = "0" if treatment_count == "NA"
+* gen count = treatment_count
+* drop treatment_count
+* encode count, gen(treatment_count)
 
 * local macro of all variables in analysis
 unab varlist: family mal_tot fem_tot km_road km_p_sch baby_die_midw baby_die_tba thatch_r ///
@@ -253,16 +258,40 @@ la def time_to_trt_p `label', replace
 replace time_to_trt_p = time_to_trt_p + 50
 la values time_to_trt_p time_to_trt_p
 
-unab varlist: electric_dummy infant_mort pc1
-foreach i of local varlist {
-	reghdfe `i' i.time_to_trt_p i.year, cluster(commune_number year) absorb(village_code)
-	coefplot, drop(61.time_to_trt_p || 62.time_to_trt_p || 63.time_to_trt_p || *.year) xline(10) yline(0) vertical omit ///
-		recast(line) color(blue) ciopts(recast(rline) color(blue) lp(dash)) graphregion(color(white)) ///
-		bgcolor(white) xtitle("Years to Treatment") ytitle("Treatment effects on" `i')
-	graph export `"time_to_trt/trt_byyear_`i'.png"', replace
-}
+cd ..
+cd ..
 
+reghdfe electric_dummy i.time_to_trt_p i.year, cluster(commune_number year) absorb(village_code)
+outreg2 using "Report/time_to_trt/electric", replace excel ci
+
+reghdfe infant_mort i.time_to_trt_p i.year, cluster(commune_number year) absorb(village_code)
+outreg2 using "Report/time_to_trt/mortality", replace excel ci
+
+reghdfe pc1 i.time_to_trt_p i.year, cluster(commune_number year) absorb(village_code)
+outreg2 using "Report/time_to_trt/wealth", replace excel ci
+
+coefplot, drop(61.time_to_trt_p || 62.time_to_trt_p || 63.time_to_trt_p || *.year) xline(10) yline(-.0796854) ///
+	vertical omit recast(line) color(blue) ciopts(recast(rline) color(blue) lp(dash)) graphregion(color(white)) ///
+	bgcolor(white) xtitle("Years to Treatment") ytitle("Treatment effects on electricity access (dummy)")	
+	
+
+graph export "time_to_trt/trtByYear_electricity.png", replace
+
+reghdfe infant_mort i.time_to_trt_p i.year, cluster(commune_number year) absorb(village_code)
+coefplot, drop(61.time_to_trt_p || 62.time_to_trt_p || 63.time_to_trt_p || *.year) xline(10) yline(.2745915) vertical omit ///
+	recast(line) color(blue) ciopts(recast(rline) color(blue) lp(dash)) graphregion(color(white)) ///
+	bgcolor(white) xtitle("Years to Treatment") ytitle("Treatment effects on infant mortality")
+graph export "time_to_trt/trtByYear_infantMort.png", replace
+
+reghdfe pc1 i.time_to_trt_p i.year, cluster(commune_number year) absorb(village_code)
+coefplot, drop(61.time_to_trt_p || 62.time_to_trt_p || 63.time_to_trt_p || *.year) xline(10) yline(-.4185868) vertical omit ///
+	recast(line) color(blue) ciopts(recast(rline) color(blue) lp(dash)) graphregion(color(white)) ///
+	bgcolor(white) xtitle("Years to Treatment") ytitle("Treatment effects on household wealth")
+graph export "time_to_trt/trtByYear_hhWealth.png", replace
+	
 ***
+
+cd "Report"
 
 cgmreg electric_dummy time_to_trt, cluster(commune_number year)
 est sto n1
@@ -329,6 +358,24 @@ local txtfiles: dir . files "*.txt"
 foreach txt in `txtfiles' {
     erase `"`txt'"'
 }
+
+***
+
+reghdfe electric_dummy treatment_count i.year, cluster(commune_number year) absorb(village_code)
+outreg2 using "Report/cdb_models.doc", replace noni addtext("Year FEs", Y, "Village FEs", Y) keep(treatment_count) /// 
+	ctitle("Electricity Dummy")
+reghdfe infant_mort treatment_count i.year, cluster(commune_number year) absorb(village_code)
+outreg2 using "Report/cdb_models.doc", append noni addtext("Year FEs", Y, "Village FEs", Y) keep(treatment_count) /// 
+	ctitle("Infant Mortality")
+reghdfe pc1 treatment_count i.year, cluster(commune_number year) absorb(village_code)
+outreg2 using "Report/cdb_models.doc", append noni addtext("Year FEs", Y, "Village FEs", Y) keep(treatment_count) /// 
+	ctitle("Household Wealth (PC1)")
+erase "Report/cdb_models.txt"
+
+
+
+
+
 
 
 

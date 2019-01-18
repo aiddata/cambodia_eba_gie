@@ -51,6 +51,8 @@ gen total_count = intra_cell_count + border_cell_count
 egen projects_dummy = sum(total_count), by(cell_id)
 drop if projects_dummy == 0
 
+outsheet using "Report/tables/ntl_sum_stats_irrigation.csv", comma
+
 ***
 
 cgmreg ntl_dummy intra_cell_count, cluster(commune_number year)
@@ -149,3 +151,13 @@ local txtfiles: dir . files "*.txt"
 foreach txt in `txtfiles' {
     erase `"`txt'"'
 }
+
+levelsof province_number, loc(levels) sep()
+foreach l of local levels{
+	reghdfe ntl intra_cell_count border_cell_count i.year c.year#i.province_number if province_number!=`l', cluster(commune_number year) absorb(cell_id)
+	outreg2 using "/Users/christianbaehr/Downloads/test.doc", append noni keep(intra_cell_count border_cell_count) ctitle(`"`l'"')
+}
+
+
+
+

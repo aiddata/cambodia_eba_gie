@@ -163,8 +163,9 @@ sum_stats$infant_mort <- sum_stats$baby_die_midw + sum_stats$baby_die_tba
 sum_stats$electricity <- sum_stats$that_r_elec + sum_stats$z_fib_r_elec + sum_stats$til_r_elec + sum_stats$villa_r_elec
 sum_stats$electric_dummy <- ifelse(sum_stats$electricity>0, 1, 0)
 
-stargazer(sum_stats[,c("infant_mort","electric_dummy","hh_wealth","pc1")], type="html",
-          covariate.labels=c("Infant Mortality","Electricity Access (dummy)","Unweighted HH Wealth","Weighted HH Wealth"),
+stargazer(sum_stats[,c("infant_mort","electric_dummy","hh_wealth","pc1", "count")], type="html",
+          covariate.labels=c("Infant Mortality","Electricity Access (dummy)","Unweighted HH Wealth","Weighted HH Wealth",
+                             "Number of projects"),
           omit.summary.stat=c("n", "p25", "p75"), title = "CDB Outcomes Summary Statistics", out = "Report/cdb_sum_stats.html")
 
 

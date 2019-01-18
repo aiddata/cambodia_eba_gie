@@ -51,6 +51,8 @@ gen total_count = intra_cell_count + border_cell_count
 egen projects_dummy = sum(total_count), by(cell_id)
 drop if projects_dummy == 0
 
+outsheet using "Report/tables/ntl_sum_stats_water.csv", comma
+
 ***
 
 cgmreg ntl_dummy intra_cell_count, cluster(commune_number year)

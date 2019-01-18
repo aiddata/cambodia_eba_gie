@@ -48,6 +48,7 @@ egen ntl_binned = cut(ntl), at(0, 10, 20, 30, 40, 50, 60, 70)
 * table ntl_binned, contents(min ntl max ntl)
 
 ***
+gen project_count = intra_cell_count + border_cell_count
 
 * gen total_count = intra_cell_count + border_cell_count
 * egen projects_dummy = sum(total_count), by(cell_id)
@@ -121,7 +122,6 @@ outreg2 using "Results/uni-village-projects/ntl_continuous.doc", append noni add
 
 ***
 
-gen project_count = intra_cell_count + border_cell_count
 cgmreg ntl project_count, cluster(commune_number year)
 est sto d1
 outreg2 using "Results/uni-village-projects/merged_treatment/ntl_continuous.doc", replace noni nocons ///
