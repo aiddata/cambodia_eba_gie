@@ -8,77 +8,62 @@
 setwd("~/box sync/cambodia_eba_gie")
 
 library(plyr)
-library(dplyr)
-library(readxl)
-library(sf)
-library(stringr)
-library(sp)
+# library(dplyr)
+# library(readxl)
+# library(sf)
+# library(stringr)
+# library(sp)
 library(spatialEco)
-library(rlist)
-library(rgdal)
+# library(rlist)
+# library(rgdal)
 
-# the commented out code merges the three PID datasets and assigns a common Activity Type index to the PID data
-# it then writes out a complete PID dataset that can be read in instead of re-running this code each time
+# the commented out code merges the three PID datasets then writes out a complete PID dataset that can be read in instead 
+# of re-running this code each time
+pid2008 <- read.csv("pid/completed_pid/pid_2008.csv", stringsAsFactors = F)
+pid2008$bid.dummy <- ifelse(pid2008$n.bidders>0, 1, 0)
+pid2008[,c("actual.start.yr", "actual.start.mo")] <- NA
 
-# pid2016 <- read.csv("pid/completed_pid/pid_2016.csv", stringsAsFactors = F)
-# pid2012 <- read.csv("pid/completed_pid/pid_2012.csv", stringsAsFactors = F)
-# pid2008 <- read.csv("pid/completed_pid/pid_2008.csv", stringsAsFactors = F)
-# pid <- rbind.fill(pid2016, pid2012, pid2008)
-# 
-# common.index <- as.data.frame(matrix(data = NA, nrow = 21, ncol = 0))
-# common.index[1:17,"2008"] <- sort(unique(pid2008$activity.type))
-# common.index[1:17,"2012"] <- sort(unique(pid2012$activity.type))[match(common.index[1:17,"2008"],
-#                                                                        sort(unique(pid2012$activity.type)))]
-# common.index[1:17,"2016"] <- sort(unique(pid2016$activity.type))[match(common.index[1:17,"2008"],
-#                                                                        sort(unique(pid2016$activity.type)))]
-# common.index[18:21, "2012"] <- unique(pid2012$activity.type)[!(unique(pid2012$activity.type) %in% common.index[1:17,"2012"])]
-# common.index[18:21, "2016"] <- unique(pid2016$activity.type)[match(common.index[18:21, "2012"], unique(pid2016$activity.type))]
-# common.index[,"type"] <- c(common.index[1:17,"2008"], common.index[18:21, "2012"])
-# common.index[,"id"] <- seq(1, 21, 1)
-# 
-# pid <- merge(pid[,!(names(pid)=="activity.type.num")], common.index[,c("type", "id")], by.x = "activity.type", by.y = "type")
-# names(pid)[names(pid)=="id"] <- "activity.type.num"
-# write.csv(pid, "pid/completed_pid/pid_merge.csv", row.names = F)
+pid2012 <- read.csv("pid/completed_pid/pid_2012.csv", stringsAsFactors = F)
+pid2012$bid.dummy <- ifelse(pid2012$n.bidders>0, 1, 0)
 
-# reading in complete PID data
-pid <- read.csv("pid/completed_pid/pid_merge.csv",stringsAsFactors = F)
+pid2016 <- read.csv("pid/completed_pid/pid_2016.csv", stringsAsFactors = F)
+pid2016$bid.dummy <- ifelse(pid2016$n.bidders>0, 1, 0)
+pid2016[,c("last.report", "new.repair.num", "status")] <- NA
+
+pid <- do.call("rbind", list(pid2008, pid2012, pid2016))
 pid <- pid[pid$actual.end.yr!=1908 | is.na(pid$actual.end.yr),]
 
 polygons <- readRDS("inputdata/gadm36_KHM_4_sp.rds")
 shape <- as.data.frame(read.csv("inputdata/village_grid_files/village_data.csv", stringsAsFactors = F))
-spatial.data <- SpatialPointsDataFrame(coords = shape[,c("longitude", "latitude")], data = shape, 
-                                       proj4string = CRS("+proj=longlat +datum=WGS84"))
-shape <- as.data.frame(point.in.poly(x=spatial.data, y=polygons))[,c("VILL_CODE", "VILL_NAME", "NAME_1", "NAME_2", "NAME_3")]
-names(shape) <- c("village.code", "village.name", "province.name", "district.name", "commune.name")
+shape <- SpatialPointsDataFrame(coords = shape[,c("longitude", "latitude")], data = shape, proj4string = CRS("+proj=longlat +datum=WGS84"))
+shape <- as.data.frame(point.in.poly(x=shape, y=polygons))[,c("VILL_CODE", "VILL_NAME", "NAME_1", "NAME_2", "NAME_3")]
+names(shape) <- c("vill_code", "vill_name", "prov_name", "dist_name", "comm_name")
 
 # merging PID data with shape data based on Village ID
-pid <- merge(shape, pid, by.x = "village.code", by.y = "vill.id", all.y = T)
+pid <- merge(shape, pid, by.x = "vill_code", by.y = "vill.id", all.y = T)
 # generating a variable that contains the length of each PID project
-pid$project.length <- (((pid$actual.end.yr-pid$actual.start.yr)*12)+(pid$actual.end.mo-pid$actual.start.mo))
+pid$proj_length <- (((pid$actual.end.yr-pid$actual.start.yr)*12)+(pid$actual.end.mo-pid$actual.start.mo))
 
 # some PID projects are missing an actual end date value. To avoid losing data, actual end date is estimated by determining the average
 # project length of other projects in the same year and in the same province and treating that as the expected length of the project. This
 # expected length, assuming we have an actual start date value, allows us to estimate the end date of the project.
-pid$enddate.type <- NA
+pid$enddate_type <- NA
 for(i in 1:nrow(pid)) {
-  if(is.na(pid$actual.end.yr[i])) {
-    if(is.na(pid$actual.start.yr[i])) {
-      # determining the mean project length for projects in the the same province and year as i
-      avg.length <- mean(pid$project.length[which(pid$planned.start.yr==pid$planned.start.yr[i] & pid$province.name==pid$province.name[i])], na.rm = T)
-      # for cases where the actual start date is missing, we use the planned start date as the reference point
-      # for estimating actual end date
-      pid$actual.end.yr[i] <- pid$planned.start.yr[i] + floor((pid$planned.start.mo[i]+avg.length)/12)
-      pid$actual.end.mo[i] <- round(((pid$planned.start.mo[i]+avg.length) %% 12), digits = 0)
-      # assigning end date estimation codes for robustness checks
-      pid$enddate.type[i] <- 2
-    } else if (!is.na(pid$actual.start.yr[i])) {
-      avg.length <- mean(pid$project.length[which(pid$actual.start.yr==pid$actual.start.yr[i] & pid$province.name==pid$province.name[i])], na.rm = T)
-      # expected end date is estimated based on mean project length and the actual start date value
-      pid$actual.end.yr[i] <- pid$actual.start.yr[i] + floor((pid$actual.start.mo[i]+avg.length)/12)
-      pid$actual.end.mo[i] <- round(((pid$actual.start.mo[i]+avg.length) %% 12), digits = 0)
-      pid$enddate.type[i] <- 1
-    } else {pid$enddate.type[i] <- 0}
-  } else {pid$enddate.type[i] <- 0}
+  if(is.na(pid$actual.end.yr[i]) & is.na(pid$actual.start.yr[i])) {
+    avg.length <- mean(pid$proj_length[which(pid$planned.start.yr==pid$planned.start.yr[i] & pid$province.name==pid$province.name[i])], na.rm = T)
+    pid$actual.end.yr[i] <- pid$planned.start.yr[i] + floor((pid$planned.start.mo[i]+avg.length)/12)
+    pid$actual.end.mo[i] <- round(((pid$planned.start.mo[i]+avg.length) %% 12), digits = 0)
+    # assigning end date estimation codes for robustness checks
+    pid$enddate_type[i] <- 2
+  } else if(is.na(pid$actual.end.yr[i]) & !is.na(pid$actual.start.yr[i])) {
+    avg.length <- mean(pid$proj_length[which(pid$actual.start.yr==pid$actual.start.yr[i] & pid$province.name==pid$province.name[i])], na.rm = T)
+    # expected end date is estimated based on mean project length and the actual start date value
+    pid$actual.end.yr[i] <- pid$actual.start.yr[i] + floor((pid$actual.start.mo[i]+avg.length)/12)
+    pid$actual.end.mo[i] <- round(((pid$actual.start.mo[i]+avg.length) %% 12), digits = 0)
+    pid$enddate.type[i] <- 1
+  } else {
+    pid$enddate.type[i] <- 0
+  }
 }
 
 pid <- pid[!is.na(pid$actual.end.yr),]
