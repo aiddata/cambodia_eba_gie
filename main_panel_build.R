@@ -9,12 +9,8 @@ setwd("~/box sync/cambodia_eba_gie")
 
 library(plyr)
 library(dplyr)
-# library(readxl)
-# library(sf)
 library(stringr)
-# library(sp)
 library(spatialEco)
-# library(rlist)
 library(rgdal)
 
 boundaries <- readRDS("inputdata/gadm36_KHM_4_sp.rds")
@@ -179,6 +175,8 @@ panel <- reshape(data = pre_panel, direction = "long", idvar = "cell_id", sep = 
 
 panel <- panel[, !grepl(paste(c(2014:2018), collapse = "|"), names(panel))]
 names(panel) <- gsub("_1992", "", names(panel))
+
+panel$year <- panel$year + 1991
 
 # Create pre-trend for each cell's ntl values from 1992-2002
 #subset panel to only include 1992-2001
