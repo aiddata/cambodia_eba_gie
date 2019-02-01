@@ -40,7 +40,11 @@ communes_2003$admin_funds_03 <- as.numeric(communes_2003$admin_funds_03)
 communes_2003$dev_funds_03 <- as.numeric(communes_2003$dev_funds_03)
 communes_2003$total_funds_03 <- as.numeric(communes_2003$total_funds_03)
 
-###################
+communes_2003$comm_type <- ifelse(is.na(communes_2003$categoryA), communes_2003$categoryB, communes_2003$categoryA)
+communes_2003 <- communes_2003[,c("comm_code", "comm_name", "comm_type", "n_councilors_03", "admin_funds_03",
+                                  "dev_funds_03", "total_funds_03")]
+
+###
 
 temp_list <- list()
 for(i in dir("inputData/councilors-villages_data/2004")) {
@@ -51,38 +55,32 @@ for(i in dir("inputData/councilors-villages_data/2004")) {
 }
 communes_2004 <- do.call("rbind", temp_list)
 
+communes_2004 <- communes_2004[!is.na(communes_2004$total_funds_04),]
+communes_2004 <- communes_2004[!is.na(communes_2004$comm_code),]
+communes_2004 <- communes_2004[!is.na(communes_2004$comm_name),]
 
+communes_2004$comm_code <- gsub(" ", "", communes_2004$comm_code)
+communes_2004$comm_code <- gsub("I|l", "1", communes_2004$comm_code)
 
+communes_2004$n_councilors_04 <- gsub("II", "11", communes_2004$n_councilors_04)
 
+communes_2004$n_villages <- gsub("IO", "10", communes_2004$n_villages)
 
+communes_2004$admin_funds_04 <- gsub("\\.| |,", "", communes_2004$admin_funds_04)
+communes_2004$dev_funds_04 <- gsub("\\.| |,", "", communes_2004$dev_funds_04)
+communes_2004$total_funds_04 <- gsub("\\.| |,", "", communes_2004$total_funds_04)
 
-y <- y[(y$`2`!="Sub-total" & y$`2`!="Total:" & y$`2`!="Total") | is.na(y$`2`),]
+communes_2004$admin_funds_04 <- as.numeric(communes_2004$admin_funds_04)
+communes_2004$dev_funds_04 <- as.numeric(communes_2004$dev_funds_04)
+communes_2004$total_funds_04 <- as.numeric(communes_2004$total_funds_04)
 
+communes_2004$total_funds_04[communes_2004$comm_code=="40804"] <- 29000000
+communes_2004$total_funds_04[communes_2004$comm_code=="210103"] <- 27000000
 
-boundaries <- readRDS("inputdata/gadm36_KHM_4_sp.rds")
-shape <- as.data.frame(read.csv("inputdata/village_grid_files/village_data.csv", stringsAsFactors = F))
-village_points <- SpatialPointsDataFrame(coords = shape[,c("longitude", "latitude")], data = shape, proj4string = CRS("+proj=longlat +datum=WGS84"))
-shape <- as.data.frame(point.in.poly(x=village_points, y=boundaries))[,c("VILL_CODE", "VILL_NAME", "NAME_1", "NAME_2", "NAME_3")]
-names(shape) <- c("vill_code", "vill_name", "prov_name", "dist_name", "comm_name")
+###
 
-temp_shape <- NULL
-for(i in 1:nrow(shape)) {
-  if(nchar(shape$vill_code[i])==7) {
-    temp_shape[i] <- paste(unlist(strsplit(as.character(as.numeric(shape$vill_code[i])), ""))[1:5],collapse = "")
-  } else {
-    temp_shape[i] <- paste(unlist(strsplit(as.character(as.numeric(shape$vill_code[i])), ""))[1:6],collapse = "")
-  }
-}
-temp_shape2 <- unique(temp_shape)
-sum(y$`1` %in% temp_shape2)
-
-###################
-
-
-
-
-
-
+councilors_data <- merge(communes_2003, communes_2004, by="comm_code")
+sum(councilors_data$n_councilors_03==councilors_data$n_councilors_04)
 
 
 
