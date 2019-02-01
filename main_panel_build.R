@@ -198,6 +198,12 @@ panel<-merge(panel,obj_coeff,by="cell_id", all.x=T)
 
 panel$n_vill <- unlist(lapply(str_split(panel$village_box_ids, "\\|"), FUN = function(x) {length(x)}))
 
+###
+
+councilors_data <- read.csv("inputData/councilors_data/councilors_data.csv", stringsAsFactors = F)
+panel$comm_code <- ifelse(nchar(panel$vill_code)==8, substr(panel$vill_code,1,6), substr(panel$vill_code,1,5))
+panel <- merge(panel, councilors_data, by="comm_code", all.x=T)
+
 ## Write Panel Data File
 # write.csv(panel, file = "ProcessedData/panel.csv", row.names = F)
 # panel <- read.csv("ProcessedData/panel.csv", stringsAsFactors = F)

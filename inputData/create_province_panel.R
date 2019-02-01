@@ -91,4 +91,4 @@ seila[1,"provinces"] <- "Siem Reap"
 province.data <- merge(province.data, seila, by="provinces", all = T)
 
 #exporting the province level panel dataset containing both the AIMS and Seila data into Box Sync
-#write.csv(province.data, "processedData/aims_seila_data.csv", row.names = F)
+#write.csv(province.data, "inputData/aims_seila_data.csv", row.names = F)

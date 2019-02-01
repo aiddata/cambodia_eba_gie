@@ -152,5 +152,5 @@ full.data$long <- matrix(unlist(str_split(full.data$geo, ",")), ncol = 2, byrow 
 
 full.data <- full.data[!duplicated(full.data$vill_code),]
 # write.csv(full.data[,c("vill_code", "vill_name", "province_name", "total_pop", "unverified", "lat", "long")],
-#           "processeddata/matched_shape_data.csv", row.names = F)
+#           "inputData/matched_shape_data.csv", row.names = F)
 
