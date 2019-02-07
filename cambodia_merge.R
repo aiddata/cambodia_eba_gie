@@ -408,17 +408,18 @@ names(pre.panel) <- gsub("ltdr_avhrr_yearly_ndvi.", "ndvi_", names(pre.panel))
 # reshaping cross sectional data into a panel structure with time dimension being years 1992:2013 and the panel variable being
 # cell id
 
-merge_grid_1000_lite.uncalibrated <- read.csv("inputdata/village_grid_files/merge_grid_1000_lite_uncalibrated.csv", 
-                                              stringsAsFactors = F)
-pre.panel <- merge(pre.panel, merge_grid_1000_lite.uncalibrated, by = "cell_id")
+# merge_grid_1000_lite.uncalibrated <- read.csv("inputdata/village_grid_files/merge_grid_1000_lite_uncalibrated.csv", 
+#                                               stringsAsFactors = F)
+# pre.panel <- merge(pre.panel, merge_grid_1000_lite.uncalibrated, by = "cell_id")
 names(pre.panel) <- gsub("v4composites.", "ntl_", names(pre.panel))
-names(pre.panel) <- gsub("\\.mean", "_uncalibrated", names(pre.panel))
+# names(pre.panel) <- gsub("\\.mean", "_uncalibrated", names(pre.panel))
 
 panel <- reshape(data = pre.panel, direction = "long", varying = list(paste0("ntl_", 1992:2013),
                                                                       #paste0("ndvi_", 1992:2013),
                                                                       paste0("point.count", 1992:2013),
-                                                                      paste0("box.count", 1992:2013),
-                                                                      paste0("ntl_", 1992:2013, "_uncalibrated")),
+                                                                      paste0("box.count", 1992:2013)
+                                                                      #, paste0("ntl_", 1992:2013, "_uncalibrated")
+                                                                      ),
                  idvar = "panel_id", sep = "_", timevar = "year")
 panel <- panel[, !(names(panel) %in% c(paste0("point.count", 2014:2017), paste0("box.count", 2014:2017), "dist_to_water.na",
                                        "dist_to_groads.na", "id", "panel_id",
@@ -442,7 +443,7 @@ names(panel)[names(panel)=="ntl_1992"] <- "ntl"
 names(panel)[names(panel)=="ndvi_1992"] <- "ndvi"
 names(panel)[names(panel)=="point.count1992"] <- "intra_cell_count"
 names(panel)[names(panel)=="box.count1992"] <- "border_cell_count"
-names(panel)[names(panel)=="ntl_1992_uncalibrated"] <- "ntl_uncalibrated"
+# names(panel)[names(panel)=="ntl_1992_uncalibrated"] <- "ntl_uncalibrated"
 
 # Create pre-trend for each cell's ntl values from 1992-2002
 #subset panel to only include 1992-2001
@@ -461,14 +462,30 @@ obj_coeff$ntlpre_9202<-as.numeric(obj_coeff$ntlpre_9202)
 #merge trend for each cell_id back in to full panel dataset
 panel<-merge(panel,obj_coeff,by="cell_id")
 
+###
+
+commune_data <- read.csv("inputData/governance/councilors_data.csv", stringsAsFactors = F)
+panel$comm_code <- ifelse(nchar(panel$village_code)==8, substr(panel$village_code, 1, 6), substr(panel$village_code, 1, 5))
+panel <- merge(panel, commune_data, by = "comm_code", all.x=T)
+
+province_data <- read.csv("inputData/governance/province_governance.csv", stringsAsFactors = F)
+panel <- merge(panel, province_data, by.x="province_name", by.y="Province", all.x=T)
+
+panel <- panel[c("village_code", "village_name", "district_name", "commune_name", "province_name", "cell_id", "year", 
+                 "ntl", "intra_cell_count", "border_cell_count", "vills", "unique_commune_name", "ntlpre_9202",
+                 "comm_type", "n_vill_in_comm", "n_councilors_03", "admin_funds_03", "dev_funds_03", "total_funds_03",
+                 "admin_funds_04", "dev_funds_04", "total_funds_04", "n_communes", "pct_commune_priorities_funded_2002",
+                 "pct_commune_priorities_funded_2003", "CS_council_pct_women_2002", "CS_council_pct_women_2003",
+                 "pct_new_commChiefs_prev_served_2002", "pct_new_CC_mem_prev_served_2002", "n_ExCom_staff_2003")]
+
 ## Write Panel Data File
-#write.csv(panel, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel.csv", row.names = F)
-#panel <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel.csv", stringsAsFactors = F)
+# write.csv(panel, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel.csv", row.names = F)
+# panel <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel.csv", stringsAsFactors = F)
 
 # grid_1000_matched_data <- grid_1000_matched_data[,c("cell_id", "village_point_ids", "village_box_ids")]
-# 
+
 # panel <- merge(panel, grid_1000_matched_data, by="cell_id")
-# panel$village_point_ids[panel$village_point_ids==""] <- NA
+panel$village_point_ids[panel$village_point_ids==""] <- NA
 
 panel$n_vill <- apply(panel[,c("village_point_ids", "village_box_ids")], 1, paste, collapse="|")
 panel$vills <- str_count(gsub("NA\\|", "", panel$n_vill), "\\|")+1

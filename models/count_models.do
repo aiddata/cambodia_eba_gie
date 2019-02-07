@@ -8,10 +8,10 @@ insheet using "ProcessedData/panel.csv", clear
 * dropping observations if the commune name variable contains NA values. Keeping these observations
 * creates problematic clusters when clustering errors at commune level
 
-replace border_cell_enddate_type = "." if border_cell_enddate_type == "NA"
-destring border_cell_enddate_type, replace
-replace intra_cell_enddate_type = "." if intra_cell_enddate_type == "NA"
-destring intra_cell_enddate_type, replace
+* replace border_cell_enddate_type = "." if border_cell_enddate_type == "NA"
+* destring border_cell_enddate_type, replace
+* replace intra_cell_enddate_type = "." if intra_cell_enddate_type == "NA"
+* destring intra_cell_enddate_type, replace
 
 * replacing year index with actual year
 replace year = year + 1991
@@ -25,22 +25,22 @@ gen temp = (province_number==16 & strpos(unique_commune_name, "n.a") > 0)
 drop if temp==1
 
 * formatting missing data values for the treatment date variable
-replace intra_cell_earliest_enddate = "." if intra_cell_earliest_enddate == "NA"
-destring intra_cell_earliest_enddate, replace
-replace border_cell_earliest_enddate = "." if border_cell_earliest_enddate == "NA"
-destring border_cell_earliest_enddate, replace
+* replace intra_cell_earliest_enddate = "." if intra_cell_earliest_enddate == "NA"
+* destring intra_cell_earliest_enddate, replace
+* replace border_cell_earliest_enddate = "." if border_cell_earliest_enddate == "NA"
+* destring border_cell_earliest_enddate, replace
 
 * generating the "village within cell" treatment variable 
-gen intra_cell_treatment = 0
-replace intra_cell_treatment = 1 if year >= intra_cell_earliest_enddate
+* gen intra_cell_treatment = 0
+* replace intra_cell_treatment = 1 if year >= intra_cell_earliest_enddate
 
 * generating the "village surrounding cell" treatment variable
-gen border_cell_treatment = 0
-replace border_cell_treatment = 1 if year >= border_cell_earliest_enddate
+* gen border_cell_treatment = 0
+* replace border_cell_treatment = 1 if year >= border_cell_earliest_enddate
 
 * gen earliest project end_date
-gen earliest_end= border_cell_earliest_enddate 
-replace earliest_end = intra_cell_earliest_enddate if intra_cell_earliest_enddate<border_cell_earliest_enddate
+* gen earliest_end= border_cell_earliest_enddate 
+* replace earliest_end = intra_cell_earliest_enddate if intra_cell_earliest_enddate<border_cell_earliest_enddate
 
 *gen ntl dummy that reflects if lit before 1992
 gen ntl_dummy_pre92 = 0
@@ -155,8 +155,6 @@ reghdfe ntl intra_cell_count border_cell_count i.year c.year#i.province_number i
 * gen project_count for single merged count
 ***
 
-gen project_count = intra_cell_count + border_cell_count
-egen max_projects = max(project_count), by(cell_id)
 cgmreg ntl project_count, cluster(commune_number year)
 est sto d1
 outreg2 using "Results/count_treatment/additional_models/merged_treatment/ntl_continuous.doc", replace noni nocons ///
@@ -189,13 +187,14 @@ gen trt4_intra = (intra_cell_count>=4)
 gen trt5_intra = (intra_cell_count>=5)
 reghdfe ntl trt1_intra trt2_intra trt3_intra trt4_intra trt5_intra i.year c.year#i.province_number, cluster(commune_number year) absorb(cell_id)
 
-gen trt1 = (intra_cell_count+border_cell_count>=1)
-gen trt2_4 = (intra_cell_count+border_cell_count>=2)
-gen trt5_9 = (intra_cell_count+border_cell_count>=5)
-gen trt10_ = (intra_cell_count+border_cell_count>=10)
+*gen trt1 = (intra_cell_count+border_cell_count>=1)
+*gen trt2_4 = (intra_cell_count+border_cell_count>=2)
+*gen trt5_9 = (intra_cell_count+border_cell_count>=5)
+*gen trt10_ = (intra_cell_count+border_cell_count>=10)
+
 ***
 
-gen trt1 = (project_count>=1)
+gen trt1 = (project_count>=1 & !missing(project_count)
 gen trt2_4 = (project_count>=2)
 gen trt5_9 = (project_count>=5)
 gen trt10_ = (project_count>=10)
@@ -240,6 +239,180 @@ outreg2 using "Report/main_models.doc", append noni addtext("Year FEs", Y, "Grid
 	keep(trt1 trt2_4 trt5_9 trt10_ proj_count_interact)
 
 erase "Report/main_models.txt"
+
+***
+
+replace n_vill_in_comm="" if n_vill_in_comm=="NA"
+destring n_vill_in_comm, replace
+replace n_councilors_03="" if n_councilors_03=="NA"
+destring n_councilors_03, replace
+gen councilors_per_vill = n_councilors_03/n_vill_in_comm
+
+gen comm_priorities_funded_02 = cond(pct_commune_priorities_funded_20=="NA", "", pct_commune_priorities_funded_20)
+destring comm_priorities_funded_02, replace
+
+gen comm_priorities_funded_03 = cond(v59=="NA", "", v59)
+destring comm_priorities_funded_03, replace
+
+replace cs_council_pct_women_2002 = cond(cs_council_pct_women_2002=="NA", "", cs_council_pct_women_2002)
+destring cs_council_pct_women_2002, replace
+replace cs_council_pct_women_2003 = cond(cs_council_pct_women_2003=="NA", "", cs_council_pct_women_2003)
+destring cs_council_pct_women_2003, replace
+
+gen pct_new_chiefs_prev_served_02 = cond(pct_new_commchiefs_prev_served_2=="NA", "", pct_new_commchiefs_prev_served_2)
+destring pct_new_chiefs_prev_served_02, replace
+replace pct_new_cc_mem_prev_served_2002 = cond(pct_new_cc_mem_prev_served_2002=="NA", "", pct_new_cc_mem_prev_served_2002)
+destring pct_new_cc_mem_prev_served_2002, replace
+
+replace n_excom_staff_2003 = cond(n_excom_staff_2003=="NA", "", n_excom_staff_2003)
+destring n_excom_staff_2003, replace
+
+***
+
+gen gov = councilors_per_vill
+
+reghdfe ntl c.project_count##c.gov i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/n_councilors.doc", replace noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count gov c.project_count#c.gov) ///
+	addnote("gov = # of councilors/# of villages. Commune-level")
+
+reghdfe ntl c.(trt1 trt2_4 trt5_9 trt10_)##c.gov i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/n_councilors.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(trt1 trt2_4 trt5_9 trt10_  ///
+	gov c.trt1#c.gov c.trt2_4#c.gov c.trt5_9#c.gov c.trt10_#c.gov)
+	
+***
+
+gen gov02 = comm_priorities_funded_02
+gen gov03 = comm_priorities_funded_03
+
+reghdfe ntl c.project_count##c.gov02 i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/priorities_funded.doc", replace noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count gov02 c.project_count#c.gov02) ///
+	ctitle("02 only") addnote("gov = % commune priorities that were actually funded in 2002. Province-level")
+	
+reghdfe ntl c.project_count##c.gov03 i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/priorities_funded.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count gov03 c.project_count#c.gov03) ///
+	ctitle("03 only")
+	
+reghdfe ntl c.project_count##c.(gov02 gov03) i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/priorities_funded.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count gov02 gov03 ///
+	c.project_count#c.gov02 c.project_count#c.gov03) ctitle("both years")
+
+reghdfe ntl c.(trt1 trt2_4 trt5_9 trt10_)##c.gov02 i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/priorities_funded.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(trt1 trt2_4 trt5_9 trt10_ ///
+	gov02 c.trt1#c.gov02 c.trt2_4#c.gov02 c.trt5_9#c.gov02 c.trt10_#c.gov02) ctitle("02 only")
+
+reghdfe ntl c.(trt1 trt2_4 trt5_9 trt10_)##c.gov03 i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/priorities_funded.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(trt1 trt2_4 trt5_9 trt10_  ///
+	gov03 c.trt1#c.gov03 c.trt2_4#c.gov03 c.trt5_9#c.gov03 c.trt10_#c.gov03) ctitle("03 only")
+	
+reghdfe ntl c.(trt1 trt2_4 trt5_9 trt10_)##c.(gov02 gov03) i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id) 
+outreg2 using "Results/governance/priorities_funded.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(trt1 trt2_4 trt5_9 trt10_ gov02 ///
+	gov03 c.trt1#c.gov02 c.trt2_4#c.gov02 c.trt5_9#c.gov02 c.trt10_#c.gov02 c.trt1#c.gov03 ///
+	c.trt2_4#c.gov03 c.trt5_9#c.gov03 c.trt10_#c.gov03) ctitle("both years")
+	
+***
+
+replace gov02 = cs_council_pct_women_2002
+replace gov03 = cs_council_pct_women_2003
+
+reghdfe ntl c.project_count##c.gov02 i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/pct_women.doc", replace noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count gov02 c.project_count#c.gov02) ///
+	ctitle("02 only") addnote("gov = % of commune councilors that are female. Province-level")
+	
+reghdfe ntl c.project_count##c.gov03 i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/pct_women.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count gov03 c.project_count#c.gov03) ///
+	ctitle("03 only")
+	
+reghdfe ntl c.project_count##c.(gov02 gov03) i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/pct_women.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count gov02 gov03 ///
+	c.project_count#c.gov02 c.project_count#c.gov03) ctitle("both years")
+
+reghdfe ntl c.(trt1 trt2_4 trt5_9 trt10_)##c.gov02 i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/pct_women.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(trt1 trt2_4 trt5_9 trt10_ ///
+	gov02 c.trt1#c.gov02 c.trt2_4#c.gov02 c.trt5_9#c.gov02 c.trt10_#c.gov02) ctitle("02 only")
+
+reghdfe ntl c.(trt1 trt2_4 trt5_9 trt10_)##c.gov03 i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/pct_women.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(trt1 trt2_4 trt5_9 trt10_  ///
+	gov03 c.trt1#c.gov03 c.trt2_4#c.gov03 c.trt5_9#c.gov03 c.trt10_#c.gov03) ctitle("03 only")
+	
+reghdfe ntl c.(trt1 trt2_4 trt5_9 trt10_)##c.(gov02 gov03) i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id) 
+outreg2 using "Results/governance/pct_women.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(trt1 trt2_4 trt5_9 trt10_ gov02 ///
+	gov03 c.trt1#c.gov02 c.trt2_4#c.gov02 c.trt5_9#c.gov02 c.trt10_#c.gov02 c.trt1#c.gov03 ///
+	c.trt2_4#c.gov03 c.trt5_9#c.gov03 c.trt10_#c.gov03) ctitle("both years")
+
+***
+
+replace gov = pct_new_chiefs_prev_served_02
+
+reghdfe ntl c.project_count##c.gov i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/prev_served.doc", replace noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count gov ///
+	c.project_count#c.gov) ctitle("chiefs") ///
+	addnote("gov = % of newly elected commune chiefs/council members who previously served as unelected commune chiefs/council members. Province-level")
+
+reghdfe ntl c.(trt1 trt2_4 trt5_9 trt10_)##c.gov i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/prev_served.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(trt1 trt2_4 trt5_9 trt10_  ///
+	gov c.trt1#c.gov c.trt2_4#c.gov c.trt5_9#c.gov c.trt10_#c.gov) ctitle("chiefs")
+	
+replace gov = pct_new_cc_mem_prev_served_2002
+
+reghdfe ntl c.project_count##c.gov i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/prev_served.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count gov ///
+	c.project_count#c.gov) ctitle("council members")
+
+reghdfe ntl c.(trt1 trt2_4 trt5_9 trt10_)##c.gov i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/prev_served.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(trt1 trt2_4 trt5_9 trt10_  ///
+	gov c.trt1#c.gov c.trt2_4#c.gov c.trt5_9#c.gov c.trt10_#c.gov) ctitle("council members")
+	
+***
+
+replace gov = n_excom_staff_2003
+
+reghdfe ntl c.project_count##c.gov i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/excom_staff.doc", replace noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count gov c.project_count#c.gov) ///
+	addnote("gov = # of ExCom staff assigned to support CSF implementation in 2003. Province-level")
+
+reghdfe ntl c.(trt1 trt2_4 trt5_9 trt10_)##c.gov i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/excom_staff.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(trt1 trt2_4 trt5_9 trt10_  ///
+	gov c.trt1#c.gov c.trt2_4#c.gov c.trt5_9#c.gov c.trt10_#c.gov)
 
 ***
 
