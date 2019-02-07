@@ -7,8 +7,8 @@ library(sp)
 library(spatialEco)
 
 temp_list <- list()
-for(i in dir("inputData/councilors_data/2003")) {
-  temp_data <- as.data.frame(read_xlsx(paste0("inputData/councilors_data/2003/", i), col_names = F))
+for(i in dir("inputData/governance/communes_councilors_2003")) {
+  temp_data <- as.data.frame(read_xlsx(paste0("inputData/governance/communes_councilors_2003/", i), col_names = F))
 
   names(temp_data) <- c("comm_code", "comm_name", "n_councilors_03", "categoryA", "categoryB", "admin_funds_03", "dev_funds_03", "total_funds_03")  
   temp_list[[gsub("pg_|.xlsx", "", i)]] <- temp_data
@@ -47,8 +47,8 @@ communes_2003 <- communes_2003[,c("comm_code", "comm_name", "comm_type", "n_coun
 ###
 
 temp_list <- list()
-for(i in dir("inputData/councilors_data/2004")) {
-  temp_data <- as.data.frame(read_xlsx(paste0("inputData/councilors_data/2004/", i), col_names = F))
+for(i in dir("inputData/governance/communes_councilors_2004")) {
+  temp_data <- as.data.frame(read_xlsx(paste0("inputData/governance/communes_councilors_2004/", i), col_names = F))
   names(temp_data) <- c("comm_code", "comm_name", "n_councilors_04", "n_vill_in_comm", "admin_funds_04", "dev_funds_04", "total_funds_04")
   
   temp_list[[gsub("pg_|.xlsx", "", i)]] <- temp_data
@@ -89,5 +89,5 @@ councilors_data <- councilors_data[,c("comm_code", "comm_name", "comm_type", "n_
                                       "admin_funds_03", "dev_funds_03", "total_funds_03", "admin_funds_04", 
                                       "dev_funds_04", "total_funds_04")]
 
-write.csv(councilors_data, "inputData/councilors_data/councilors_data.csv", row.names = F)
+write.csv(councilors_data, "inputData/governance/councilors_data.csv", row.names = F)
 
