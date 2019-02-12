@@ -108,7 +108,19 @@ sum(pid$local.cont>1e+7, na.rm = T)
 
 # creating a dummy variable denoting whether there was competitive bidding for a contract based
 # on the number of bidders variable
-pid$bid.dummy <- ifelse(pid$n.bidders==0, 0, 1)
+
+for(i in 2003:2018) {
+  pid[paste0("bid_dummy_", i)] <- ifelse(pid$actual.end.yr==i, pid$bid.dummy, NA)
+  pid[paste0("n_bids_", i)] <- ifelse(pid$actual.end.yr==i, pid$n.bidders, NA)
+}
+
+
+stargazer(pid[,c(sort(grep(paste(2003:2018, collapse="|"), names(pid), value = T)))], type="html",
+          # covariate.labels=c("NDVI","Slope (degree)","Distance to Road (m)","Distance to River (m)","Elevation (m)",
+          #                    "Area (hectares)","Population Density","Mean Temperature","Mean Precipitation",
+          #                    "Min Temperature","Min Precipitation","Max Temperature","Max Precipitation",
+          #                    "NDVI Pre Trend","Predicted NDVI Pre Trend"),
+          omit.summary.stat = c("max", "min", "p25", "p75", "sd"), out = "/Users/christianbaehr/Desktop/sum_stats.html")
 
 # write.csv(pid, "ProcessedData/pid.csv", row.names = F)
 # pid <- read.csv("ProcessedData/pid.csv", stringsAsFactors = F)

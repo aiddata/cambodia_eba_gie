@@ -194,7 +194,7 @@ reghdfe ntl trt1_intra trt2_intra trt3_intra trt4_intra trt5_intra i.year c.year
 
 ***
 
-gen trt1 = (project_count>=1 & !missing(project_count)
+gen trt1 = (project_count>=1)
 gen trt2_4 = (project_count>=2)
 gen trt5_9 = (project_count>=5)
 gen trt10_ = (project_count>=10)
@@ -242,6 +242,11 @@ erase "Report/main_models.txt"
 
 ***
 
+gen trt1 = (project_count>=1)
+gen trt2_4 = (project_count>=2)
+gen trt5_9 = (project_count>=5)
+gen trt10_ = (project_count>=10)
+
 replace n_vill_in_comm="" if n_vill_in_comm=="NA"
 destring n_vill_in_comm, replace
 replace n_councilors_03="" if n_councilors_03=="NA"
@@ -266,6 +271,17 @@ destring pct_new_cc_mem_prev_served_2002, replace
 
 replace n_excom_staff_2003 = cond(n_excom_staff_2003=="NA", "", n_excom_staff_2003)
 destring n_excom_staff_2003, replace
+
+gen councilors_per_vil = councilors_per_vill
+gen priorities_funded_02 = comm_priorities_funded_02
+gen priorities_funded_03 = comm_priorities_funded_03
+gen pct_women_02 = cs_council_pct_women_2002
+gen pct_women_03 = cs_council_pct_women_2003
+gen new_chiefs_prev_served = pct_new_chiefs_prev_served_02
+gen new_ccMem_prev_served = pct_new_cc_mem_prev_served_2002
+gen excom_staff = n_excom_staff_2003
+
+graph twoway (scatter councilors_per_vil max_projects) (lfit councilors_per_vil max_projects)
 
 ***
 
@@ -413,6 +429,114 @@ reghdfe ntl c.(trt1 trt2_4 trt5_9 trt10_)##c.gov i.year c.year#i.province_number
 outreg2 using "Results/governance/excom_staff.doc", append noni addtext("Year FEs", Y, ///
 	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(trt1 trt2_4 trt5_9 trt10_  ///
 	gov c.trt1#c.gov c.trt2_4#c.gov c.trt5_9#c.gov c.trt10_#c.gov)
+	
+***
+
+bysort cell_id: egen temp1 = min(year) if trt1==1
+bysort cell_id: egen temp2 = min(year) if trt2_4==1
+bysort cell_id: egen temp3 = min(year) if trt5_9==1
+bysort cell_id: egen temp4 = min(year) if trt10_==1
+
+bysort cell_id: egen year_crossed_trt1 = min(temp1)
+bysort cell_id: egen year_crossed_trt2_4 = min(temp2)
+bysort cell_id: egen year_crossed_trt5_9 = min(temp3)
+bysort cell_id: egen year_crossed_trt10_ = min(temp4)
+
+reg year_crossed_trt1 councilors_per_vil i.province_number if year==2013, cluster(province_number)
+outreg2 using "/Users/christianbaehr/Desktop/add_models.doc", replace noni addtext("Province FEs", Y) ///
+	keep(councilors_per_vil)
+reg year_crossed_trt2_4 councilors_per_vil i.province_number if year==2013, cluster(province_number)
+outreg2 using "/Users/christianbaehr/Desktop/add_models.doc", append noni addtext("Province FEs", Y) ///
+	keep(councilors_per_vil)
+reg year_crossed_trt5_9 councilors_per_vil i.province_number if year==2013, cluster(province_number)
+outreg2 using "/Users/christianbaehr/Desktop/add_models.doc", append noni addtext("Province FEs", Y) ///
+	keep(councilors_per_vil)
+reg year_crossed_trt10_ councilors_per_vil i.province_number if year==2013, cluster(province_number)
+outreg2 using "/Users/christianbaehr/Desktop/add_models.doc", append noni addtext("Province FEs", Y) ///
+	keep(councilors_per_vil)
+
+graph twoway (lfit councilors_per_vil year_crossed_trt1 if year==2013) ///
+	(scatter councilors_per_vil year_crossed_trt1 if year==2013), xtitle("Year trt1 turns on") ///
+	ytitle("#councilors/village") name(graph1) legend(off)
+
+graph twoway (lfit councilors_per_vil year_crossed_trt2_4 if year==2013) ///
+	(scatter councilors_per_vil year_crossed_trt2_4 if year==2013), xtitle("Year trt2_4 turns on") ///
+	ytitle("#councilors/village") name(graph2) legend(off)
+
+graph twoway (lfit councilors_per_vil year_crossed_trt5_9 if year==2013) ///
+	(scatter councilors_per_vil year_crossed_trt5_9 if year==2013), xtitle("Year trt5_9 turns on") ///
+	ytitle("#councilors/village") name(graph3) legend(off)
+
+graph twoway (lfit councilors_per_vil year_crossed_trt10_ if year==2013) ///
+	(scatter councilors_per_vil year_crossed_trt10_ if year==2013), xtitle("Year trt10_ turns on") ///
+	ytitle("#councilors/village") name(graph4) legend(off)
+	
+graph combine graph1 graph2 graph3 graph4, title("Year treatment threshold crossed / #councilors per village")
+
+*
+
+egen mean_councilors1 = mean(councilors_per_vil) if year == 2013, by(year_crossed_trt1)
+egen mean_councilors2 = mean(councilors_per_vil) if year == 2013, by(year_crossed_trt2_4)
+egen mean_councilors3 = mean(councilors_per_vil) if year == 2013, by(year_crossed_trt5_9)
+egen mean_councilors4 = mean(councilors_per_vil) if year == 2013, by(year_crossed_trt10_)
+
+
+graph twoway (lfit councilors_per_vil year_crossed_trt1 if year==2013) ///
+	(scatter mean_councilors1 year_crossed_trt1 if year==2013), xtitle("Year trt1 turns on") ///
+	ytitle("avg. #councilors/village") name(graph5) legend(off)
+
+graph twoway (lfit councilors_per_vil year_crossed_trt2_4 if year==2013) ///
+	(scatter mean_councilors2 year_crossed_trt2_4 if year==2013), xtitle("Year trt2_4 turns on") ///
+	ytitle("avg. #councilors/village") name(graph6) legend(off)
+
+graph twoway (lfit councilors_per_vil year_crossed_trt5_9 if year==2013) ///
+	(scatter mean_councilors3 year_crossed_trt5_9 if year==2013), xtitle("Year trt5_9 turns on") ///
+	ytitle("avg. #councilors/village") name(graph7) legend(off)
+
+graph twoway (lfit councilors_per_vil year_crossed_trt10_ if year==2013) ///
+	(scatter mean_councilors4 year_crossed_trt10_ if year==2013), xtitle("Year trt10_ turns on") ///
+	ytitle("avg. #councilors/village") name(graph8) legend(off)
+	
+graph combine graph5 graph6 graph7 graph8,  title("Year treatment threshold crossed / avg. #councilors per village")
+
+
+
+
+***
+
+tabstat councilors_per_vil priorities_funded_02 priorities_funded_03 pct_women_02 pct_women_03 ///
+	new_chiefs_prev_served new_ccMem_prev_served excom_staff if year==2013, by(trt1)
+	
+tabstat councilors_per_vil priorities_funded_02 priorities_funded_03 pct_women_02 pct_women_03 ///
+	new_chiefs_prev_served new_ccMem_prev_served excom_staff if year==2013, by(trt2_4)
+
+tabstat councilors_per_vil priorities_funded_02 priorities_funded_03 pct_women_02 pct_women_03 ///
+	new_chiefs_prev_served new_ccMem_prev_served excom_staff if year==2013, by(trt5_9)
+	
+tabstat councilors_per_vil priorities_funded_02 priorities_funded_03 pct_women_02 pct_women_03 ///
+	new_chiefs_prev_served new_ccMem_prev_served excom_staff if year==2013, by(trt10_)
+
+tabstat trt1 trt2_4 trt5_9 trt10_ if year==2013
+
+replace gov = councilors_per_vill
+gen project_count_sq = project_count^2
+
+reghdfe ntl c.project_count##c.gov project_count_sq i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+
+reghdfe ntl c.project_count##c.gov project_count_sq i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/n_councilors_ad.doc", replace noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count gov c.project_count#c.gov) ///
+	addnote("gov = # of councilors/# of villages. Commune-level")
+
+replace gov = pct_new_cc_mem_prev_served_2002
+
+reghdfe ntl c.project_count##c.gov project_count_sq i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/prev_served_ad.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count gov ///
+	c.project_count#c.gov) ctitle("council members")
 
 ***
 
