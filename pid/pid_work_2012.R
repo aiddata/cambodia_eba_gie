@@ -60,6 +60,7 @@ sum(contract.merge$local.cont)
 rm(list=setdiff(ls(), "contract.merge"))
 
 contract <- read_excel("pid/pid_excel_2012/Contract.xlsx")
+
 contract <- merge(contract, contract.merge, by.x="Id", by.y="ContractId")
 
 contract.progress <- read_excel("pid/pid_excel_2012/ContractProgress.xlsx")
@@ -126,9 +127,26 @@ length(unique(contract$matchID))
 
 #only retaining the project and contract observations that do not have duplicated match IDs
 project <- project[!(project$matchID %in% project$matchID[duplicated(project$matchID)]),]
-contract <- contract[!(contract$matchID %in% contract$matchID[duplicated(contract$matchID)]),]
 #merging the contract and project data
 project <- merge(project, contract, by.x="matchID", by.y="matchID")
+project <- project[!duplicated(project$matchID),]
+
+length(unique(paste(project$Id.x, project$VillageId.x)))
+length(unique(paste(project$Id.x, project$VillageId.x, project$OrderNr)))
+
+contract$biddummy <- ifelse(contract$Bidders>0, 1, 0)
+contract$one_bid_dummy <- ifelse(contract$Bidders==1, 1, 0)
+bidders <- aggregate(contract[,c("Bidders", "biddummy")], by=list(contract$matchID), FUN = mean)
+project$bid.dummy <- NA
+project$one_bid_dummy <- NA
+
+for(i in 1:nrow(project)) {
+  project$Bidders[i] <- bidders$Bidders[which(bidders$Group.1==project$matchID[i])]
+  project$bid.dummy[i] <- bidders$biddummy[which(bidders$Group.1==project$matchID[i])]
+  project$one_bid_dummy[i] <- bidders$one_bid_dummy[which(bidders$Group.1==project$matchID[i])]
+  
+}
+
 length(unique(project$matchID))
 
 #splitting the PlannedStartOn into planned start year and planned start month. Doing the same for ActualWorkStartOn
@@ -168,13 +186,13 @@ project <- project[,c("Id.x", "Id.y", "Name_EN.y.y.2", "SubSectorId.x",
                       "Name_EN.y.y", "List_Project_Output_Type_ID", "Name_EN.y.x",
                       "plannedstartyear", "plannedstartmonth", "actualstartyear", "actualstartmonth",
                       "plannedendyear", "plannedendmonth", "actualendyear", "actualendmonth", "last.report",
-                      "progress", "Bidders", "AwardedByBidding", "cs.fund", "local.cont", "VillageId.x")]
+                      "progress", "Bidders", "bid.dummy", "one_bid_dummy", "cs.fund", "local.cont", "VillageId.x")]
 #assigning meaningful names to the variables in the data
 names(project) <- c("project.id", "contract.id", "activity.type", "activity.type.num",
                     "activity.desc", "new.repair.num", "new.repair", "planned.start.yr",
                     "planned.start.mo", "actual.start.yr", "actual.start.mo", "planned.end.yr", "planned.end.mo",
-                    "actual.end.yr", "actual.end.mo", "last.report", "status", "n.bidders", "bid.dummy", "cs.fund",
-                    "local.cont", "vill.id")
+                    "actual.end.yr", "actual.end.mo", "last.report", "status", "n.bidders", "bid.dummy", "one_bid_dummy", 
+                    "cs.fund", "local.cont", "vill.id")
 project$pid_id <- seq(200001, (200000+nrow(project)), 1)
 
 # write.csv(project, "pid/completed_pid/pid_2012.csv", row.names = F)

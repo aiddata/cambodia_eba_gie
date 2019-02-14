@@ -21,6 +21,8 @@ library(rgdal)
 # it then writes out a complete PID dataset that can be read in instead of re-running this code each time
 
 # pid2016 <- read.csv("pid/completed_pid/pid_2016.csv", stringsAsFactors = F)
+# pid2016$bid.dummy <- ifelse(pid2016$n.bidders>0, 1, 0)
+# pid2016$one_bid_dummy <- ifelse(pid2016$n.bidders==1, 1, 0)
 # pid2012 <- read.csv("pid/completed_pid/pid_2012.csv", stringsAsFactors = F)
 # pid2008 <- read.csv("pid/completed_pid/pid_2008.csv", stringsAsFactors = F)
 # pid <- rbind.fill(pid2016, pid2012, pid2008)
@@ -111,6 +113,7 @@ sum(pid$local.cont>1e+7, na.rm = T)
 
 for(i in 2003:2018) {
   pid[paste0("bid_dummy_", i)] <- ifelse(pid$actual.end.yr==i, pid$bid.dummy, NA)
+  pid[paste0("one_bid_dummy_", i)] <- ifelse(pid$actual.end.yr==i, pid$one_bid_dummy, NA)
   pid[paste0("n_bids_", i)] <- ifelse(pid$actual.end.yr==i, pid$n.bidders, NA)
 }
 

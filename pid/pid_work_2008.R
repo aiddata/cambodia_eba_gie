@@ -150,7 +150,7 @@ for(i in unique(contract$linkProjectID)) {
     
     
     #merging subsetted project and contract data
-    temp.project2 <- merge(temp.project[!duplicated(temp.project$VillGis),], temp.contract, by.x="ProjectID", by.y="linkProjectID")
+    temp.project2 <- cbind(temp.project[!duplicated(temp.project$VillGis),], temp.contract[1,][,!names(temp.contract)=="linkProjectID"])
     
     for(j in unique(temp.project2$VillGis)) {
       temp.project2$FundCS[temp.project2$VillGis==j] <- sum(temp.contract$FundCS)*(nrow(temp.project[temp.project$VillGis==j,]))
@@ -158,7 +158,13 @@ for(i in unique(contract$linkProjectID)) {
     }
     
     #including subsetted project and contract data in the skeleton dataset created above the loop
-    proj.cont[(nrow(proj.cont)+1):(nrow(proj.cont)+nrow(temp.project2)),] <- temp.project2
+    x <- (nrow(proj.cont)+1):(nrow(proj.cont)+nrow(temp.project2))
+    proj.cont[x,] <- temp.project2
+    proj.cont$Bidders[x] <- mean(temp.contract$Bidders, na.rm = T)
+    proj.cont$bid_dummy[x] <- mean(ifelse(temp.contract$Bidders>1, 1, 0), na.rm = T)
+    proj.cont$one_bid_dummy[x] <- mean(ifelse(temp.contract$Bidders==1, 1, 0), na.rm = T)
+    proj.cont$FundCS[x] <- mean(temp.contract$FundCS, na.rm = T)
+    proj.cont$FundLocalContr[x] <- mean(temp.contract$FundLocalContr, na.rm = T)
   }
 }
 
@@ -213,11 +219,12 @@ sum(is.na(proj.cont$actualendyear))
 proj.cont <- proj.cont[,c("ProjectID", "ContractID", "NameE.y.x", "ProjTypeID", "Name",
                           "isNew", "NameE.y.y", "plannedstartyear", "plannedstartmonth",
                           "plannedendyear", "plannedendmonth", "actualendyear", "actualendmonth",
-                          "last.report", "progress", "Bidders", "FundCS", "FundLocalContr", "VillGis")] #no subsector, need competitive bidding dummy
+                          "last.report", "progress", "Bidders", "bid_dummy", "one_bid_dummy", 
+                          "FundCS", "FundLocalContr", "VillGis")] #no subsector, need competitive bidding dummy
 names(proj.cont) <- c("project.id", "contract.id", "activity.type",  "activity.type.num",
                       "activity.desc", "new.repair.num", "new.repair", "planned.start.yr", "planned.start.mo",
                       "planned.end.yr", "planned.end.mo", "actual.end.yr", "actual.end.mo", "last.report",
-                      "status", "n.bidders", "cs.fund", "local.cont", "vill.id")
+                      "status", "n.bidders", "bid.dummy", "one_bid_dummy", "cs.fund", "local.cont", "vill.id")
 proj.cont$pid_id <- seq(100001, (100000+nrow(proj.cont)), 1)
 
 # write.csv(proj.cont, "pid/completed_pid/pid_2008.csv", row.names = F)
