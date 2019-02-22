@@ -124,9 +124,10 @@ project2$one_bid_dummy <- NA
 
 for(i in 1:nrow(project2)) {
   if(length(which(bidders$Group.1==project2$tempvar[i]))>0) {
-    project2$Bidders[i] <- bidders$Bidders[which(bidders$Group.1==project2$tempvar[i])]
-    project2$bid.dummy[i] <- bidders$biddummy[which(bidders$Group.1==project2$tempvar[i])]
-    project2$one_bid_dummy[i] <- bidders$one_bid_dummy[which(bidders$Group.1==project2$tempvar[i])]
+    
+    project2$Bidders[i] <- paste(contract$Bidders[which(contract$tempvar==project2$tempvar[i])], collapse = "|")
+    #project2$bid.dummy[i] <- bidders$biddummy[which(bidders$Group.1==project2$tempvar[i])]
+    #project2$one_bid_dummy[i] <- bidders$one_bid_dummy[which(bidders$Group.1==project2$tempvar[i])]
   }
   if(sum(project$tempvar==project2$tempvar[i])>1) {
     tempdata <- project[project$temp==project2$temp[i],]
@@ -159,4 +160,4 @@ names(project2) <- c("project_id", "contract_id", "activity_type", "activity_des
 
 project2$pid_id <- seq(200001, (200000+nrow(project2)), 1)
 
-# write.csv(project, "pid/completed_pid/pid_2012.csv", row.names = F)
+# write.csv(project2, "pid/completed_pid/pid_2012.csv", row.names = F)

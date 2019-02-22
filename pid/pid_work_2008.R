@@ -135,8 +135,10 @@ for(i in 1:nrow(pid2008)) {
   if(sum(pid20082$commvar==pid2008$commvar[i])>1) {
     temp <- pid20082[pid20082$commvar==pid2008$commvar[i],]
     
-    pid2008$FundCS[i] <- paste(temp$FundCS, collapse = "|")
-    pid2008$FundLocalContr[i] <- paste(temp$FundLocalContr, collapse = "|")
+    pid2008$FundCS[i] <- mean(temp$FundCS, na.rm = T)
+    pid2008$FundLocalContr[i] <- mean(temp$FundLocalContr, na.rm = T)
+    
+    pid2008$Bidders[i] <- paste(temp$Bidders, collapse = "|")
   }
 }
 

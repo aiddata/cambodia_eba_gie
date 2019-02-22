@@ -1,7 +1,7 @@
 
 set matsize 11000
-cd "/Users/rbtrichler/Box Sync/cambodia_eba_gie"
-cd "/Users/christianbaehr/Box Sync/cambodia_eba_gie"
+* cd "/Users/rbtrichler/Box Sync/cambodia_eba_gie"
+* cd "/Users/christianbaehr/Box Sync/cambodia_eba_gie"
 
 insheet using "ProcessedData/panel.csv", clear
 
@@ -234,9 +234,9 @@ reghdfe ntl trt1 trt2_4 trt5_9 trt10_ trt1_interact_2008 trt2_4_interact_2008 tr
 	trt10_interact_2008 i.year c.year#i.province_number, cluster(commune_number year) absorb(cell_id)
 outreg2 using "Report/main_models.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) ///
 	keep(trt1 trt2_4 trt5_9 trt10_ trt1_interact_2008 trt2_4_interact_2008 trt5_9_interact_2008 trt10_interact_2008)
-reghdfe ntl trt1 trt2_4 trt5_9 trt10_ proj_count_interact i.year c.year#i.province_number, cluster(commune_number year) absorb(cell_id)
-outreg2 using "Report/main_models.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) ///
-	keep(trt1 trt2_4 trt5_9 trt10_ proj_count_interact)
+*reghdfe ntl trt1 trt2_4 trt5_9 trt10_ proj_count_interact i.year c.year#i.province_number, cluster(commune_number year) absorb(cell_id)
+*outreg2 using "Report/main_models.doc", append noni addtext("Year FEs", Y, "Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) ///
+*	keep(trt1 trt2_4 trt5_9 trt10_ proj_count_interact)
 
 erase "Report/main_models.txt"
 
@@ -499,9 +499,6 @@ graph twoway (lfit councilors_per_vil year_crossed_trt10_ if year==2013) ///
 	
 graph combine graph5 graph6 graph7 graph8,  title("Year treatment threshold crossed / avg. #councilors per village")
 
-
-
-
 ***
 
 tabstat councilors_per_vil priorities_funded_02 priorities_funded_03 pct_women_02 pct_women_03 ///
@@ -540,6 +537,25 @@ outreg2 using "Results/governance/prev_served_ad.doc", append noni addtext("Year
 
 ***
 
+replace pct_comp_bids="." if pct_comp_bids=="NA"
+destring pct_comp_bids, replace
+
+replace n_bidders = "." if n_bidders=="NA"
+destring n_bidders, replace
+
+reghdfe ntl c.project_count##c.pct_comp_bids i.year c.year##i.province_number, cluster(commune_number year) absorb(cell_id)
+reghdfe ntl c.project_count##c.n_bidders i.year c.year##i.province_number, cluster(commune_number year) absorb(cell_id)
+
+
+
+reghdfe ntl c.(trt1 trt2_4 trt5_9 trt10_)##c.gov i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/excom_staff.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(trt1 trt2_4 trt5_9 trt10_  ///
+	gov c.trt1#c.gov c.trt2_4#c.gov c.trt5_9#c.gov c.trt10_#c.gov)
+	
+***
+
 * ntl pre-trend regressions
 gen earliest_end_date = intra_cell_earliest_enddate if intra_cell_earliest_enddate<border_cell_earliest_enddate
 replace earliest_end_date = border_cell_earliest_enddate if intra_cell_earliest_enddate>border_cell_earliest_enddate
@@ -575,36 +591,6 @@ reghdfe ntl i.time_to_trt_p i.year, cluster(commune_number year) absorb(cell_id)
 outreg2 using "Report/time_to_trt/NTL", replace excel ci
 
 ***
-
-gen time_trend = c.year if year<=2002
-
-collapse (min) earliest_end_date province_number, by(cell_id year)
-
-
-* gen treatment = (year >= earliest_end_date)
-
-drop if earliest_end_date > 2016
- 
-reg time_trend earliest_end_date i.province_number
-
-***
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	
 
 cd "Results/count_treatment"
 local txtfiles: dir . files "ntl_continuous.doc"

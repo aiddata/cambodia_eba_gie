@@ -17,34 +17,8 @@ library(spatialEco)
 library(rlist)
 library(rgdal)
 
-# the commented out code merges the three PID datasets and assigns a common Activity Type index to the PID data
-# it then writes out a complete PID dataset that can be read in instead of re-running this code each time
-
-# pid2016 <- read.csv("pid/completed_pid/pid_2016.csv", stringsAsFactors = F)
-# pid2016$bid.dummy <- ifelse(pid2016$n.bidders>0, 1, 0)
-# pid2016$one_bid_dummy <- ifelse(pid2016$n.bidders==1, 1, 0)
-# pid2012 <- read.csv("pid/completed_pid/pid_2012.csv", stringsAsFactors = F)
-# pid2008 <- read.csv("pid/completed_pid/pid_2008.csv", stringsAsFactors = F)
-# pid <- rbind.fill(pid2016, pid2012, pid2008)
-# 
-# common.index <- as.data.frame(matrix(data = NA, nrow = 21, ncol = 0))
-# common.index[1:17,"2008"] <- sort(unique(pid2008$activity.type))
-# common.index[1:17,"2012"] <- sort(unique(pid2012$activity.type))[match(common.index[1:17,"2008"],
-#                                                                        sort(unique(pid2012$activity.type)))]
-# common.index[1:17,"2016"] <- sort(unique(pid2016$activity.type))[match(common.index[1:17,"2008"],
-#                                                                        sort(unique(pid2016$activity.type)))]
-# common.index[18:21, "2012"] <- unique(pid2012$activity.type)[!(unique(pid2012$activity.type) %in% common.index[1:17,"2012"])]
-# common.index[18:21, "2016"] <- unique(pid2016$activity.type)[match(common.index[18:21, "2012"], unique(pid2016$activity.type))]
-# common.index[,"type"] <- c(common.index[1:17,"2008"], common.index[18:21, "2012"])
-# common.index[,"id"] <- seq(1, 21, 1)
-# 
-# pid <- merge(pid[,!(names(pid)=="activity.type.num")], common.index[,c("type", "id")], by.x = "activity.type", by.y = "type")
-# names(pid)[names(pid)=="id"] <- "activity.type.num"
-# write.csv(pid, "pid/completed_pid/pid_merge.csv", row.names = F)
-
 # reading in complete PID data
-pid <- read.csv("pid/completed_pid/pid_merge.csv",stringsAsFactors = F)
-pid <- pid[pid$actual.end.yr!=1908 | is.na(pid$actual.end.yr),]
+pid <- read.csv("PID/completed_pid/pid_merge.csv", stringsAsFactors = F)
 
 polygons <- readRDS("inputdata/gadm36_KHM_4_sp.rds")
 shape <- as.data.frame(read.csv("inputdata/village_grid_files/village_data.csv", stringsAsFactors = F))
@@ -85,17 +59,6 @@ for(i in 1:nrow(pid)) {
 
 pid <- pid[!is.na(pid$actual.end.yr),]
 
-# ensuring all levels of the new/repair string variable are consistent
-pid$new.repair[pid$new.repair=="Routinemaintenance"] <- "Routine maintenance"
-pid$new.repair[pid$new.repair=="Repeatedservice"] <- "Repeated service"
-
-# normalizing numeric new/repair variables
-pid$new.repair.num[pid$new.repair.num==601] <- 2
-pid$new.repair.num[pid$new.repair.num==602] <- 1
-pid$new.repair.num[pid$new.repair.num==603] <- 3
-pid$new.repair.num[pid$new.repair.num==604] <- 4
-pid$new.repair.num[pid$new.repair.num==605] <- 5
-
 # removing major outliers in the bidding variable
 nrow(pid[(pid$n.bidders %in% c(2003, 3140)),])
 pid <- pid[!(pid$n.bidders %in% c(2003, 3140)),] #May want to keep the rows with high n bidders
@@ -111,19 +74,17 @@ sum(pid$local.cont>1e+7, na.rm = T)
 # creating a dummy variable denoting whether there was competitive bidding for a contract based
 # on the number of bidders variable
 
-for(i in 2003:2018) {
-  pid[paste0("bid_dummy_", i)] <- ifelse(pid$actual.end.yr==i, pid$bid.dummy, NA)
-  pid[paste0("one_bid_dummy_", i)] <- ifelse(pid$actual.end.yr==i, pid$one_bid_dummy, NA)
+pid$n.bidders <- sapply(pid$n.bidders, FUN = function(x) {mean(as.numeric(unlist(strsplit(x, "\\|"))), na.rm = T)})
+
+for(i in 2003:2017) {
+  pid[paste0("pct_compet_bids", i)] <- ifelse(pid$actual.end.yr==i, pid$pct_comp_bid, NA)
   pid[paste0("n_bids_", i)] <- ifelse(pid$actual.end.yr==i, pid$n.bidders, NA)
 }
 
 
-stargazer(pid[,c(sort(grep(paste(2003:2018, collapse="|"), names(pid), value = T)))], type="html",
-          # covariate.labels=c("NDVI","Slope (degree)","Distance to Road (m)","Distance to River (m)","Elevation (m)",
-          #                    "Area (hectares)","Population Density","Mean Temperature","Mean Precipitation",
-          #                    "Min Temperature","Min Precipitation","Max Temperature","Max Precipitation",
-          #                    "NDVI Pre Trend","Predicted NDVI Pre Trend"),
-          omit.summary.stat = c("max", "min", "p25", "p75", "sd"), out = "/Users/christianbaehr/Desktop/sum_stats.html")
+stargazer(pid[,c(sort(grep(paste(2003:2017, collapse="|"), names(pid), value = T)))], type="html",
+          omit.summary.stat = c("max", "min", "p25", "p75", "sd"), 
+          out = "/Users/christianbaehr/Desktop/sum_stats.html")
 
 # write.csv(pid, "ProcessedData/pid.csv", row.names = F)
 # pid <- read.csv("ProcessedData/pid.csv", stringsAsFactors = F)
@@ -216,9 +177,9 @@ stargazer(pid[,c(sort(grep(paste(2003:2018, collapse="|"), names(pid), value = T
 ###################
 
 # creating a skeleton dataset to store treatment data
-treatment <- as.data.frame(matrix(NA, nrow = 1, ncol = 24))[0,]
+treatment <- as.data.frame(matrix(NA, nrow = 1, ncol = 23))[0,]
 names(treatment) <- c("village.code", "village.name", "province.name", "district.name", "commune.name", "earliest.end.date", 
-                      "enddate.type", "earliest.sector.num", "earliest.sector", paste0("count", 2003:2017))
+                      "enddate.type", "earliest.sector", paste0("count", 2003:2017))
 
 # filling treatment dataset with necessary variables
 for(i in 1:length(unique(pid$village.code))) {
@@ -228,18 +189,33 @@ for(i in 1:length(unique(pid$village.code))) {
   # the treatment data stores the village ID, province the village is in, and the end year and activity type information
   # for the observation with the earliest end year
   treatment[row, c("village.code", "village.name", "province.name", "district.name", "commune.name", "earliest.end.date", 
-                   "enddate.type", "earliest.sector.num", "earliest.sector")] <- c(temp$village.code[1],
-                                                                                   temp$village.name[1],
-                                                                                   temp$province.name[1],
-                                                                                   temp$district.name[1],
-                                                                                   temp$commune.name[1],
-                                                                                   temp$actual.end.yr[which.min(temp$actual.end.yr)],
-                                                                                   temp$enddate.type[which.min(temp$actual.end.yr)],
-                                                                                   temp$activity.type.num[which.min(temp$actual.end.yr)],
-                                                                                   temp$activity.type[which.min(temp$actual.end.yr)])
+                   "enddate.type", "earliest.sector")] <- c(na.omit(temp$village.code)[1],
+                                                            na.omit(temp$village.name)[1],
+                                                            na.omit(temp$province.name)[1],
+                                                            na.omit(temp$district.name)[1],
+                                                            na.omit(temp$commune.name)[1],
+                                                            temp$actual.end.yr[which.min(temp$actual.end.yr)],
+                                                            temp$enddate.type[which.min(temp$actual.end.yr)],
+                                                            temp$activity.type.num[which.min(temp$actual.end.yr)],
+                                                            temp$activity.type[which.min(temp$actual.end.yr)])                       
   # storing the count of villages getting treated in each year in the treatment data
   for(j in sort(unique(pid$actual.end.yr))) {
     treatment[row, grep(paste0("count", j), names(treatment))] <- nrow(temp[temp$actual.end.yr==j,])
+  }
+}
+
+treatment$comm_code <- ifelse(nchar(treatment$village.code==8),
+                              substr(treatment$village.code, 1, 6),
+                              substr(treatment$village.code, 1, 5))
+for(i in 1:nrow(treatment)) {
+  if(is.na(treatment$province.name[i])) {
+    treatment$province.name[i] <- na.omit(treatment$province.name[treatment$comm_code==treatment$comm_code[i]])[1]
+  }
+  if(is.na(treatment$district.name[i])) {
+    treatment$district.name[i] <- na.omit(treatment$district.name[treatment$comm_code==treatment$comm_code[i]])[1]
+  }
+  if(is.na(treatment$commune.name[i])) {
+    treatment$commune.name[i] <- na.omit(treatment$commune.name[treatment$comm_code==treatment$comm_code[i]])[1]
   }
 }
 
@@ -311,19 +287,23 @@ for(i in 1:nrow(grid_1000_matched_data)) {
 }
 
 # creating a skeleton dataset to store the merged PID/shape and grid cell data
-pre.panel.names <- c("village.code", "village.name", "province.name", "district.name", "commune.name", 
-                      as.vector(outer(c("box", "point"), c("earliest.end.date", "enddate.type", "earliest.sector.num", "earliest.sector", 
-                                                           paste0("count", 1992:2017)), paste, sep=".")), names(grid_1000_matched_data))
+# pre.panel.names <- c("village.code", "village.name", "province.name", "district.name", "commune.name", "cell_id", 
+#                       as.vector(outer(c("box", "point"), c("earliest.end.date", "enddate.type", "earliest.sector", 
+#                                                            paste0("count", 1992:2017)), paste, sep=".")), names(grid_1000_matched_data))
+pre.panel.names <- c("village.code", "village.name", "province.name", "district.name", "commune.name", "cell_id", 
+                     as.vector(outer(c("box", "point"), c("earliest.end.date", "enddate.type", "earliest.sector", 
+                                                          paste0("count", 1992:2017)), paste, sep=".")))
 
 pre.panel <- as.data.frame(matrix(NA, nrow = nrow(grid_1000_matched_data), ncol = length(pre.panel.names)))
 names(pre.panel) <- pre.panel.names
 
 # in the "pre.panel" data, there will be one observation per grid cell
-for(i in 1:length(unique(grid_1000_matched_data$cell_id))) {
+for(i in 1:length(grid_1000_matched_data$cell_id)) {
   # creating temporary datasets containing the PID/shape data of the villages that lie within or border grid cell i. This
   # matching relies on the list objects build previously to identify which villages are within/bordering each cell
   temp.point <- treatment[which(treatment$village.code %in% as.character(as.numeric(id.list[[i]]))),]
   temp.box <- treatment[which(treatment$village.code %in% as.character(as.numeric(id.list2[[i]]))),]
+  pre.panel$cell_id[i] <- grid_1000_matched_data$cell_id[i]
   
   # if there are one or more villages within grid cell i, then we fill out the variables with the prefix "point." with
   # the information frmo those villages
@@ -335,7 +315,6 @@ for(i in 1:length(unique(grid_1000_matched_data$cell_id))) {
     pre.panel[i, "commune.name"] <- temp.point$commune.name[which.min(temp.point$earliest.end.date)]
     pre.panel[i, "point.earliest.end.date"] <- temp.point$earliest.end.date[which.min(temp.point$earliest.end.date)]
     pre.panel[i, "point.enddate.type"] <- temp.point$enddate.type[which.min(temp.point$enddate.type)]
-    pre.panel[i, "point.earliest.sector.num"] <- temp.point$earliest.sector.num[which.min(temp.point$earliest.end.date)]
     pre.panel[i, "point.earliest.sector"] <- temp.point$earliest.sector[which.min(temp.point$earliest.end.date)]
     # computing the total number of projects each year for the villages within grid cell i
     for(j in sort(unique(treatment$earliest.end.date))) {
@@ -355,7 +334,6 @@ for(i in 1:length(unique(grid_1000_matched_data$cell_id))) {
     pre.panel[i, "commune.name"] <- temp.box$commune.name[which.min(temp.box$earliest.end.date)]
     pre.panel[i, "box.earliest.end.date"] <- temp.box$earliest.end.date[which.min(temp.box$earliest.end.date)]
     pre.panel[i, "box.enddate.type"] <- temp.box$enddate.type[which.min(temp.box$enddate.type)]
-    pre.panel[i, "box.earliest.sector.num"] <- temp.box$earliest.sector.num[which.min(temp.box$earliest.end.date)]
     pre.panel[i, "box.earliest.sector"] <- temp.box$earliest.sector[which.min(temp.box$earliest.end.date)]
     # computing the total number of projects each year for the villages bordering grid cell i
     for(j in sort(unique(treatment$earliest.end.date))) {
@@ -366,7 +344,7 @@ for(i in 1:length(unique(grid_1000_matched_data$cell_id))) {
     }
   }
   # merging the grid cell data for grid cell i with the pre.panel dataset for grid cell i
-  pre.panel[i, which(names(pre.panel) %in% names(grid_1000_matched_data))] <- grid_1000_matched_data[i,]
+  # pre.panel[i, which(names(pre.panel) %in% names(grid_1000_matched_data))] <- grid_1000_matched_data[i,]
   
   if(is.na(pre.panel$village.code[i])) {
     villages <- c(id.list[[i]], id.list2[[i]]) %>% .[!.==""]
@@ -382,13 +360,20 @@ for(i in 1:length(unique(grid_1000_matched_data$cell_id))) {
   if(i %% 1000 == 0){cat(i, "of", nrow(grid_1000_matched_data), "\n")}
 }
 
+pre.panel <- merge(pre.panel, grid_1000_matched_data, by="cell_id")
+
 for(i in grep("count", names(pre.panel))) {pre.panel[which(is.na(pre.panel[,i])), i] <- 0}
 
 pre.panel$unique.commune.name <- paste(pre.panel$province.name, pre.panel$district.name, pre.panel$commune.name)
 
 # editing variable names to make data reshaping easier
 names(pre.panel) <- gsub("v4composites_calibrated_201709.", "ntl_", names(pre.panel)) %>% gsub(".mean", "", .)
-names(pre.panel) <- gsub("ltdr_avhrr_yearly_ndvi.", "ndvi_", names(pre.panel))
+pre.panel <- pre.panel[!grepl("ndvi", names(pre.panel))]
+
+pre.panel$temp <- paste(pre.panel$village_box_ids, pre.panel$village_point_ids, sep = "|")
+pre.panel$pct_comp_bids <- sapply(pre.panel$temp, FUN = function(x) {mean(pid$pct_comp_bid[which(pid$village.code %in% as.numeric(unlist(strsplit(x, "\\|"))))])})
+pre.panel$n_bidders <- sapply(pre.panel$temp, FUN = function(x) {mean(pid$n.bidders[which(pid$village.code %in% as.numeric(unlist(strsplit(x, "\\|"))))])})
+
 # write.csv(pre.panel, "ProcessedData/pre_panel.csv", row.names=F)
 # pre.panel <- read.csv("ProcessedData/pre_panel.csv", stringsAsFactors = F)
 
@@ -426,8 +411,8 @@ names(pre.panel) <- gsub("ltdr_avhrr_yearly_ndvi.", "ndvi_", names(pre.panel))
 # merge_grid_1000_lite.uncalibrated <- read.csv("inputdata/village_grid_files/merge_grid_1000_lite_uncalibrated.csv", 
 #                                               stringsAsFactors = F)
 # pre.panel <- merge(pre.panel, merge_grid_1000_lite.uncalibrated, by = "cell_id")
-names(pre.panel) <- gsub("v4composites.", "ntl_", names(pre.panel))
-# names(pre.panel) <- gsub("\\.mean", "_uncalibrated", names(pre.panel))
+# names(pre.panel) <- gsub("v4composites.", "ntl_", names(pre.panel))
+# # names(pre.panel) <- gsub("\\.mean", "_uncalibrated", names(pre.panel))
 
 panel <- reshape(data = pre.panel, direction = "long", varying = list(paste0("ntl_", 1992:2013),
                                                                       #paste0("ndvi_", 1992:2013),
@@ -437,8 +422,7 @@ panel <- reshape(data = pre.panel, direction = "long", varying = list(paste0("nt
                                                                       ),
                  idvar = "panel_id", sep = "_", timevar = "year")
 panel <- panel[, !(names(panel) %in% c(paste0("point.count", 2014:2017), paste0("box.count", 2014:2017), "dist_to_water.na",
-                                       "dist_to_groads.na", "id", "panel_id",
-                                       paste0("ndvi_", c(1990:1991, 2014:2015))))]
+                                       "dist_to_groads.na", "id", "panel_id"))]
 
 names(panel)[names(panel)=="village.code"] <- "village_code"
 names(panel)[names(panel)=="village.name"] <- "village_name"
@@ -449,13 +433,10 @@ names(panel)[names(panel)=="box.earliest.end.date"] <- "border_cell_earliest_end
 names(panel)[names(panel)=="point.earliest.end.date"] <- "intra_cell_earliest_enddate"
 names(panel)[names(panel)=="box.enddate.type"] <- "border_cell_enddate_type"
 names(panel)[names(panel)=="point.enddate.type"] <- "intra_cell_enddate_type"
-names(panel)[names(panel)=="box.earliest.sector.num"] <- "border_cell_earliest_sector_num"
-names(panel)[names(panel)=="point.earliest.sector.num"] <- "intra_cell_earliest_sector_num"
 names(panel)[names(panel)=="box.earliest.sector"] <- "border_cell_earliest_sector"
 names(panel)[names(panel)=="point.earliest.sector"] <- "intra_cell_earliest_sector"
 names(panel)[names(panel)=="unique.commune.name"] <- "unique_commune_name"
 names(panel)[names(panel)=="ntl_1992"] <- "ntl"
-names(panel)[names(panel)=="ndvi_1992"] <- "ndvi"
 names(panel)[names(panel)=="point.count1992"] <- "intra_cell_count"
 names(panel)[names(panel)=="box.count1992"] <- "border_cell_count"
 # names(panel)[names(panel)=="ntl_1992_uncalibrated"] <- "ntl_uncalibrated"
@@ -491,7 +472,8 @@ panel <- panel[c("village_code", "village_name", "district_name", "commune_name"
                  "comm_type", "n_vill_in_comm", "n_councilors_03", "admin_funds_03", "dev_funds_03", "total_funds_03",
                  "admin_funds_04", "dev_funds_04", "total_funds_04", "n_communes", "pct_commune_priorities_funded_2002",
                  "pct_commune_priorities_funded_2003", "CS_council_pct_women_2002", "CS_council_pct_women_2003",
-                 "pct_new_commChiefs_prev_served_2002", "pct_new_CC_mem_prev_served_2002", "n_ExCom_staff_2003")]
+                 "pct_new_commChiefs_prev_served_2002", "pct_new_CC_mem_prev_served_2002", "n_ExCom_staff_2003", "n_bidders",
+                 "pct_comp_bids")]
 
 ## Write Panel Data File
 # write.csv(panel, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel.csv", row.names = F)
@@ -516,6 +498,36 @@ panel$unique_id <- apply(panel[,c("village_code", "year_temp")], 1, paste, colla
 merged_data <- merge(cdb, panel, by="unique_id")
 
 write.csv(merged_data, "/Users/christianbaehr/Box Sync/cambodia_eba_gie/processeddata/ntl_cdb_merge.csv", row.names = F)
+
+###
+
+bid_panel <- merge(panel, grid_1000_matched_data[,c("cell_id", "village_point_ids", "village_box_ids")], by="cell_id")
+
+bid_panel$temp <- paste(grid_1000_matched_data$village_box_ids, grid_1000_matched_data$village_point_ids, sep = "|")
+
+bid_panel$temp[1]
+1-mean(pid$bid.dummy[which(pid$village.code %in% unlist(strsplit(bid_panel$temp[1], "\\|")))], na.rm = T)
+
+bid_panel$pct_comp_bids <- sapply(bid_panel$temp, FUN = function(x) {1-mean(pid$bid.dummy[which(pid$village.code %in% unlist(strsplit(x, "\\|")))], na.rm = T)})
+  
+bid_panel$pct_comp_bids2 <- NA
+for(i in 1:nrow(bid_panel)) {
+  
+  bid_panel$pct_comp_bids2[i] <- 1-mean(pid$bid.dummy[which(pid$village.code %in% unlist(strsplit(bid_panel$temp[i], "\\|")))], na.rm = T)
+ print(i) 
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

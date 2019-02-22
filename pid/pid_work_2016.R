@@ -240,20 +240,20 @@ for(i in 1:nrow(pid)) {
 pid$tempvar <- paste(pid$Id.x, pid$Id.y)
 pid2 <- pid[!duplicated(pid$tempvar),]
 
-pid$n_bidders <- ifelse(grepl("\\)", pid$n_bidders),
-                        gsub('[\\(\\)]| |"', "", regmatches(pid$n_bidders, gregexpr("\\(.*?\\)", pid$n_bidders))),
-                        pid$n_bidders)
+# pid$n_bidders <- ifelse(grepl("\\)", pid$n_bidders),
+#                         gsub('[\\(\\)]| |"', "", regmatches(pid$n_bidders, gregexpr("\\(.*?\\)", pid$n_bidders))),
+#                         pid$n_bidders)
 
 for(i in unique(pid2$tempvar)) {
   pid2$quantity[pid2$tempvar==i] <- paste(pid$quantity.x[pid$tempvar==i], collapse = "|")
   pid2$new_repair[pid2$tempvar==i] <- paste(pid$new_repair[pid$tempvar==i], collapse = "|")
-  pid2$n_bidders[pid2$tempvar==i] <- paste(pid$n_bidders[pid2$tempvar==i], collapse = "|")
+  pid2$Bidders[pid2$tempvar==i] <- paste(pid$Bidders[pid$tempvar==i], collapse = "|")
 }
 
 pid2 <- pid2[,c("Id.x", "contract_id.x", "activity", "NameEn", "new_repair", "start_year_planned.x", 
                 "start_month_planned.x", "end_year_planned.x", "end_month_planned.x", "start_year_actual.x", 
                 "start_month_actual.x", "end_year_actual.x", "end_month_actual.x", "last_report", "status", 
-                "n_bidders", "cs_fund", "local_cont", "Id.y")]
+                "Bidders", "cs_fund", "local_cont", "Id.y")]
 
 names(pid2) <- c("project_id", "contract_id", "activity_type", "activity_desc", "new_repair", "start_year_planned",
                  "start_month_planned", "end_year_planned", "end_month_planned", "start_year_actual", 
