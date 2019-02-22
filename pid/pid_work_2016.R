@@ -217,10 +217,11 @@ pre_pid$start_year_actual <- year(as.Date(pre_pid$ActualWorkStartOn, format = "%
 pre_pid$start_month_planned <- month(as.Date(pre_pid$PlannedStartOn, format = "%Y-%m-%d"))
 pre_pid$start_year_planned <- year(as.Date(pre_pid$PlannedStartOn, format = "%Y-%m-%d"))
 
-pre_pid$mergevar <- paste(pre_pid$AreaCode.x, pre_pid$end_month_planned, pre_pid$end_year_planned, pre_pid$start_month_planned, pre_pid$start_year_planned)
+pre_pid$mergevar <- paste(pre_pid$AreaCode.x, pre_pid$end_month_planned, pre_pid$end_year_planned, 
+                          pre_pid$start_month_planned, pre_pid$start_year_planned, pre_pid$Id.y)
 
 contract_output$mergevar <- paste(contract_output$comm_num, contract_output$end_month_planned, contract_output$end_year_planned, 
-                                  contract_output$start_month_planned, contract_output$start_year_planned)
+                                  contract_output$start_month_planned, contract_output$start_year_planned, contract_output$contract_id.x)
 contract_output$matchid <- seq(1, nrow(contract_output), 1)
 
 pid <- merge(pre_pid, contract_output, by="mergevar")
