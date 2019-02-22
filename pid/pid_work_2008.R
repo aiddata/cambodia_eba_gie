@@ -150,4 +150,4 @@ names(pid2008) <- c("project_id", "contract_id", "activity_type", "activity_desc
 
 pid2008$pid_id <- seq(100001, (100000+nrow(pid2008)), 1)
 
-# write.csv(proj.cont, "pid/completed_pid/pid_2008.csv", row.names = F)
+# write.csv(pid2008, "pid/completed_pid/pid_2008.csv", row.names = F)

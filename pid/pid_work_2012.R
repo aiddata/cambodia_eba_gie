@@ -137,14 +137,14 @@ for(i in 1:nrow(project2)) {
   }
 }
 
-project$start_year_planned <- year(project$PlannedStartOn)
-project$start_month_planned <- month(project$PlannedStartOn)
-project$start_year_actual <- year(project$ActualWorkStartOn)
-project$start_month_actual <- month(project$ActualWorkStartOn)
-project$end_year_planned <- year(project$PlannedCompletionOn)
-project$end_month_planned <- month(project$PlannedCompletionOn)
-project$end_month_actual <- ifelse(is.na(project$ActualWorkCompletionOn), month(project$last.report), month(project$ActualWorkCompletionOn))
-project$end_year_actual <- ifelse(is.na(project$ActualWorkCompletionOn), year(project$last.report), year(project$ActualWorkCompletionOn))
+project2$start_year_planned <- year(project2$PlannedStartOn)
+project2$start_month_planned <- month(project2$PlannedStartOn)
+project2$start_year_actual <- year(project2$ActualWorkStartOn)
+project2$start_month_actual <- month(project2$ActualWorkStartOn)
+project2$end_year_planned <- year(project2$PlannedCompletionOn)
+project2$end_month_planned <- month(project2$PlannedCompletionOn)
+project2$end_month_actual <- ifelse(is.na(project2$ActualWorkCompletionOn), month(project2$last.report), month(project2$ActualWorkCompletionOn))
+project2$end_year_actual <- ifelse(is.na(project2$ActualWorkCompletionOn), year(project2$last.report), year(project2$ActualWorkCompletionOn))
 
 names(project2)[which(names(project2)=="Name_EN.y.y")[2]] <- "Name_EN.y.y.2"
 
