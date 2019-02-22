@@ -5,273 +5,262 @@
 # Will use project completion dates to create treatment info
 #------------------------------
 
-setwd("~/box sync/cambodia_eba_gie")
-
 library(readxl)
-library(XML)
-library(dplyr)
-library(stringr)
+library(rlist)
+library(zoo)
+library(data.table)
 
-# data <- list()
+setwd("~/Box Sync/cambodia_eba_gie")
+
+# pulling implementation data from NCDDS
+
+# implementation_raw <- list()
 # for(i in 1:25) {
-#   for(j in 2013:2016) {
-#       url <- paste0("http://db.ncdd.gov.kh/pid/reports/monitoring/contractsummary.castle?pv=", i, "&year=", j)
-#       x <- readHTMLTable(url)
-#       y <- x[[2]]
-#       data[[paste0(j, i)]] <- y[-1,]
+#   for(j in 2013:2017) {
+#     url <- paste0("http://db.ncdd.gov.kh/pid/reports/monitoring/Implementation.castle?detail=1&pv=", i, "&year=", j)
+#     html <- readHTMLTable(url)
+#     table <- html$tblRpt
+#     table$year <- j
+#     implementation_raw <- list.append(implementation_raw, table)
+#   }
+# }
+# save(implementation_raw, file = "pid/2016_data/implementation_2016.Rdata")
+
+# load in the scraped implementation data
+load("pid/2016_data/implementation_2016.Rdata")
+
+# merge all years/provinces of implementation data into one
+implementation <- do.call(rbind, implementation_raw)
+# all vars character
+implementation <- as.data.frame(apply(implementation, 2, as.character), stringsAsFactors = F)
+# update names
+names(implementation) <- c("area_name", "vill_name", "description", "quantity", "start_actual", 
+                           "end_planned", "end_actual", "last_report", "status", "year")
+# create empty variables
+implementation[c("comm_name", "start_planned", "comm_num", "contractor", "contract_id")] <- NA
+
+# populating each observation with "commune-wide" data. To see why this is necessary, visit
+# the NCDDS website and look at how they structure the tables
+for(i in 1:nrow(implementation)) {
+  # only want to add values to the "sub-commune data", not the commune-level lines
+  if(implementation$area_name[i]=="") {
+    
+    # these two lines allow us to determine which row contains the commune-wide data
+    ref <- which(implementation$area_name!="")
+    ref2 <- ref[which.min(1/(ref-i))]
+    
+    # fill out dates columns
+    implementation$start_actual[i] <- implementation$start_actual[ref2]
+    implementation$end_planned[i] <- implementation$end_planned[ref2]
+    implementation$end_actual[i] <- implementation$end_actual[ref2]
+    implementation$start_planned[i] <- implementation$quantity[ref2]
+    
+    # fill out the last report and status columns
+    implementation$last_report[i] <- implementation$last_report[ref2]
+    implementation$status[i] <- implementation$status[ref2]
+    
+    # fill out additional columns
+    implementation$comm_name[i] <- implementation$area_name[ref2]
+    # for commune number, we only want the text before the first forward slash in the vill_name var
+    implementation$comm_num[i] <- unlist(strsplit(implementation$vill_name[ref2], "/"))[1]
+    implementation$contractor[i] <- implementation$description[ref2]
+    implementation$contract_id[i] <- implementation$vill_name[ref2]
+  }
+}
+# now remove the commune-level columns so we have village level data
+implementation <- implementation[implementation$area_name=="",]
+
+# reading in gazetteer data so we can merge the commune number and village name
+# with the actual village number from gazetteer
+gaz <- read_excel("inputdata/National Gazetteer 2014.xlsx", sheet = 4)
+gaz$comm_num <- ifelse(nchar(gaz$Id)==7, substr(gaz$Id, 1, 5), substr(gaz$Id, 1, 6))
+gaz$unique <- paste(gaz$comm_num, gaz$Name_EN)
+# omitted duplicated "commune number-village name" combinations from gazetteer
+gaz <- gaz[!(gaz$unique %in% gaz$unique[duplicated(gaz$unique)]),]
+# merging impementation data with gazetteer for village IDs
+implementation$unique <- paste(as.numeric(implementation$comm_num), implementation$vill_name)
+implementation <- merge(implementation, gaz[c("unique", "Id")], by = "unique", all.x=T)
+
+# removing forward slashes and hyphens from contract IDs
+implementation$contract_id <- as.numeric(gsub("/|-", "", implementation$contract_id))
+
+###
+
+# pulling procurement data from the NCDDS website
+# procurement_raw <- list()
+# for(i in 1:25) {
+#   for(j in 2013:2017) {
+#     url <- paste0("http://db.ncdd.gov.kh/pid/reports/monitoring/procurement.castle?pv=", i, "&year=", j)
+#     html <- readHTMLTable(url)
+#     table <- html$tblRpt
+#     table$year <- j
+#     procurement_raw <- list.append(procurement_raw, table)
 #   }
 # }
 
-#load the R list object including scraped pid data
-load("PID/pid_excel_2016/pid_2016_r_list.RData")
-#object 92 is empty
-data=x[-92]
-#creating skeleton dataset to store all 2016 pid data
-data.pull <- as.data.frame(matrix(NA, nrow = 0, ncol = 17))
+# load in procurement data
+load("pid/2016_data/procurement_2016.Rdata")
 
-test.vector <- NA
+# merge all years/provinces into one dataset
+procurement <- do.call(rbind, procurement_raw)
+# all variables as character
+procurement <- as.data.frame(apply(procurement, 2, as.character), stringsAsFactors = F)
+# update names
+names(procurement) <- c("project", "n_bidders", "contract", "no", "contractor", "bid_value", "discount",
+                        "rejected", "note", "year")
+# remove rows that arent pertinent
+procurement <- procurement[procurement$project!="" & procurement$project!="Project" & !is.na(procurement$n_bidders),]
+# only retaining the text before the comma in the project varible to retrieve commune numbers
+procurement$comm_num <- as.numeric(sapply(procurement$project, FUN = function(x) {unlist(strsplit(x, ","))[1]}))
 
-#it may be best to select a test i value and run through each of these functions on that example to understand the work flow
-for(i in 1:99) {
-  #making all column classes character
-  new.data <- mutate_all(data[[i]], as.character)
-  
-  #adding district data to all underlying rows
-  new.data$district <- NA
-  #identifying all unique districts in the data
-  districts <- new.data$Commune[which(is.na(new.data$Village))]
-  #identifying the index values associated with each district
-  dist.rows <- c(which(is.na(new.data$Village)), nrow(new.data))
-  
-  for(j in 1:(length(dist.rows)-1)) {
-    #adding district data to each row
-    new.data$district[dist.rows[j]:dist.rows[j+1]] <- districts[j]
-  }
-  #removing the deprecated district rows
-  new.data <- new.data[-dist.rows[-length(dist.rows)],]
-  
-  new.data$comm2 <- new.data$Commune
-  #identifying unique communes
-  communes <- new.data$Commune[which(new.data$Commune != "")]
-  #identifying the index values associated with each commune
-  comm.rows <- c(which(new.data$Commune != ""), nrow(new.data))
-  
-  #identifying unique villages, activities, cs.fund data, and local.cont data
-  new.data$village.id <- NA
-  villages <- new.data$Village[which(new.data$Commune != "")]
-  new.data$activity <- NA
-  activities <- new.data$Outputs[which(new.data$Commune != "")]
-  new.data$cs.fund <- NA
-  cs.fund <- new.data$`Total Value`[which(new.data$Commune != "")]
-  new.data$local.cont <- NA
-  local.cont <- new.data$`C/S Fund`[which(new.data$Commune != "")]
-  
-  #as a test, just pulling the raw local cont values from the data and testing the sum of these values
-  #against the sum of local cont values from the actual dataset produced by this loop. We expect the sums
-  #to be equivalent, indicating that the cs fund and local cont values have not been double counted
-  test.vector[i] <- 
-    new.data$`C/S Fund` %>%
-    gsub("R", "", .) %>%
-    gsub(",", "", .) %>%
-    as.numeric() %>%
-    sum(na.rm = T)
-  
-  for(k in 1:(length(comm.rows)-1)) {
-    #adding commune, village, and activity data to each row
-    new.data$comm2[comm.rows[k]:comm.rows[k+1]] <- communes[k]
-    new.data$village.id[comm.rows[k]:comm.rows[k+1]] <- villages[k]
-    new.data$activity[comm.rows[k]:comm.rows[k+1]] <- activities[k]
-    
-    #identifying the number that will be used to divide cs.fund and local.cont data
-    y <- length(comm.rows[k]:comm.rows[k+1])-2
-    
-    #formatting the cs.fund and local.cont data so they can be included in computations
-    cs.fund2 <- unlist(strsplit(cs.fund[k]," "))[1]
-    cs.fund2 <- gsub(",", "", cs.fund2)
-    local.cont2 <- unlist(strsplit(local.cont[k]," "))[1]
-    local.cont2 <- gsub(",", "", local.cont2)
-    
-    #there was an indexing issue, so this if else clause is a long winded way of dividing cs.fund and local.cont data
-    #to avoid double counting
-    if(k+1==length(comm.rows)) {
-      cs.fund2 <- as.numeric(cs.fund2)/(y+1)
-      local.cont2 <- as.numeric(local.cont2)/(y+1)
-    } else {
-      cs.fund2 <- as.numeric(cs.fund2)/y
-      local.cont2 <- as.numeric(local.cont2)/y
-    }
-    #including the divided cs.find and local.cont data in the new dataset
-    new.data$cs.fund[comm.rows[k]:comm.rows[k+1]] <- cs.fund2
-    new.data$local.cont[comm.rows[k]:comm.rows[k+1]] <- local.cont2
-    
-  }
-  #removing deprecated commune data from the dataset
-  new.data <- new.data[-comm.rows[-length(comm.rows)],]
-  #first row of the dataset is empty
-  new.data <- new.data[,-1]
-  names(new.data)[names(new.data)=="comm2"] <- "commune"
-  
-  #pulling the new/repair data from the outputs column
-  new.data$isNew <- NA
-  for(m in 1:nrow(new.data)) {
-    new.data$isNew[m] <- unlist(strsplit(new.data$Outputs[m], "]"))[1]
-  }
-  new.data$isNew <- gsub(" ", "", new.data$isNew)
-  new.data$isNew <- gsub("\\[", "", new.data$isNew)
-  
-  #splitting the column id and name into separate rows
-  new.data$commune.id <- matrix(unlist(str_split(new.data$commune, ", ")), ncol = 2, byrow = T)[,1]
-  new.data$commune.name <- matrix(unlist(str_split(new.data$commune, ", ")), ncol = 2, byrow = T)[,2]
-  
-  #formatting the village.id variable
-  new.data$vill.id <- 
-    new.data$village.id %>%
-    gsub("/", "", .) %>%
-    gsub("-", "", .) %>%
-    as.numeric()
-  
-  data[[i]] <- new.data
-  #this loop indexes through each dataset in the list, formats the dataset, and then I append that formatted dataset onto the
-  #skeleton dataset created at the top of the loop
-  data.pull[(nrow(data.pull)+1):(nrow(data.pull)+nrow(new.data)),] <- new.data
-  
-  if(i==99) {
-    #at the completion of the loop, pasting the names from the datasets in the list onto the new dataset
-    names(data.pull) <- names(new.data)
-  }
-}
-sum(test.vector)
-sum(data.pull$local.cont)
+# retrieving contract IDs from the contract variable
+procurement$contract_id <- sapply(procurement$contract, FUN = function(x) unlist(strsplit(x, "\r\n\t\t\t"))[1])
+# remove slashes/hyphens from contract IDs
+procurement$contract_id <- as.numeric(gsub("/|-", "", procurement$contract_id))
+# remove observations with unsigned contracts
+procurement <- procurement[procurement$contract!="Not yet sign contract",]
+# merge implementation and procurement data by contract ID. Retain all implementation obs
+contract_output <- merge(implementation, procurement, by="contract_id", all.x = T)
 
-rm(list=setdiff(ls(), "data.pull"))
+###
 
-pid2016 <- read_excel("PID/PID2019-2016-new.xlsx")
-#had to read in the dates data separately, because R doesnt really allow you to pull in xlsx data with only some date columns
-pid2016.dates <- read_excel("PID/PID2019-2016-new.xlsx", col_types = "date")
-pid2016$ActualWorkCompletionOn <- pid2016.dates$ActualWorkCompletionOn
-pid2016$ActualWorkStartOn <- pid2016.dates$ActualWorkStartOn
-
-# length(unique(pid2016$Id))
-# sum(data.pull$vill.id %in% pid2016$Id)
-# sum(pid2016$Id %in% data.pull$vill.id)
-
-#splitting dates data into year and month
-pid2016$plannedstartyear[!is.na(pid2016$PlannedStartOn)] <- 
-  matrix(unlist(str_split(as.character(pid2016$PlannedStartOn[!is.na(pid2016$PlannedStartOn)]), "-")), ncol=3, byrow=T)[,1]
-pid2016$plannedstartmonth[!is.na(pid2016$PlannedStartOn)] <- 
-  matrix(unlist(str_split(as.character(pid2016$PlannedStartOn[!is.na(pid2016$PlannedStartOn)]), "-")), ncol=3, byrow=T)[,2]
-
-pid2016$actualstartyear[!is.na(pid2016$ActualWorkStartOn)] <- 
-  matrix(unlist(str_split(as.character(pid2016$ActualWorkStartOn[!is.na(pid2016$ActualWorkStartOn)]), "-")), ncol=3, byrow=T)[,1]
-pid2016$actualstartmonth[!is.na(pid2016$ActualWorkStartOn)] <- 
-  matrix(unlist(str_split(as.character(pid2016$ActualWorkStartOn[!is.na(pid2016$ActualWorkStartOn)]), "-")), ncol=3, byrow=T)[,2]
-
-pid2016$plannedendyear[!is.na(pid2016$PlannedCompletionOn)] <- 
-  matrix(unlist(str_split(as.character(pid2016$PlannedCompletionOn[!is.na(pid2016$PlannedCompletionOn)]), "-")), ncol=3, byrow=T)[,1]
-pid2016$plannedendmonth[!is.na(pid2016$PlannedCompletionOn)] <- 
-  matrix(unlist(str_split(as.character(pid2016$PlannedCompletionOn[!is.na(pid2016$PlannedCompletionOn)]), "-")), ncol=3, byrow=T)[,2]
-
-pid2016$actualendyear[!is.na(pid2016$ActualWorkCompletionOn)] <- 
-  matrix(unlist(str_split(as.character(pid2016$ActualWorkCompletionOn[!is.na(pid2016$ActualWorkCompletionOn)]), "-")), ncol=3, byrow=T)[,1]
-pid2016$actualendmonth[!is.na(pid2016$ActualWorkCompletionOn)] <- 
-  matrix(unlist(str_split(as.character(pid2016$ActualWorkCompletionOn[!is.na(pid2016$ActualWorkCompletionOn)]), "-")), ncol=3, byrow=T)[,2]
-
-#removing data with start year <=2012
-pid2016 <- pid2016[as.numeric(pid2016$actualstartyear) > 2012,]
-#merging the 2016 pid data Brad sent with the data scraped from PID website
-pid2016 <- merge(pid2016, data.pull, by.x="Id", by.y="vill.id")
-
-# test <- x[[1]]
-# test$`C/S Fund` <- gsub(",", "", test$`C/S Fund`)
-# sum(as.numeric(unlist(str_split(test$`C/S Fund`, " "))), na.rm = T)
-# sum(data[[1]]$cs.fund)
-# 
-# test2 <- x[[6]]
-# test2$`Local Contrib.` <- gsub(",", "", test2$`Local Contrib.`)
-# sum(as.numeric(unlist(str_split(test2$`Local Contrib.`, " "))), na.rm = T)
-# sum(data[[6]]$local.cont)
-# 
-# test3 <- x[[1]]
-# test3$`Local Contrib.` <- gsub(",", "", test3$`Local Contrib.`)
-# sum(as.numeric(unlist(str_split(test3$`Local Contrib.`, " "))), na.rm = T)
-# sum(data[[1]]$local.cont)
-
-#reading in gazetteer data to use as a reference. We want to merge pid data with gazetteer so we can get good 
-#village Ids
-gazetteer.vill <- as.data.frame(read_excel("inputdata/National Gazetteer 2014.xlsx", sheet = 4))
-gazetteer.comm <- as.data.frame(read_excel("inputdata/National Gazetteer 2014.xlsx", sheet = 3))
-gazetteer.vill$commid <- NA
-#retrieving gazetteer commune IDs from the first few characters of the village Ids
-for(i in 1:nrow(gazetteer.vill)) {
-  if(nchar(gazetteer.vill$Id[i])==7) {
-    gazetteer.vill$commid[i] <- paste0(unlist(strsplit(as.character(gazetteer.vill$Id[i]), ""))[1:5], collapse = "")
-  } else {
-    gazetteer.vill$commid[i] <- paste0(unlist(strsplit(as.character(gazetteer.vill$Id[i]), ""))[1:6], collapse = "")
-  }
-}
-gazetteer.full <- merge(gazetteer.vill, gazetteer.comm, by.x = "commid", by.y = "Id")
-
-#pasting commune and village name in same column to avoid duplicate mismatches
-gazetteer.full$commvill <- paste(gazetteer.full$Name_EN.y, gazetteer.full$Name_EN.x)
-commvill.dups <- gazetteer.full$commvill[duplicated(gazetteer.full$commvill)]
-pid2016$commvill <- paste(pid2016$commune.name, pid2016$Village)
-
-#removing duplicate commune-village names and only keeping pid data which has corresponding commune-village name in gazetteer
-pid2016 <- pid2016[(pid2016$commvill %in% gazetteer.full$commvill),]
-pid2016 <- pid2016[!(pid2016$commvill %in% commvill.dups),]
-
-x <- merge(pid2016, gazetteer.full, by = "commvill")
-
-pid2016$village.id <- x$Id.y
-
-for(i in 1:nrow(pid2016)) {
-  pid2016$Outputs[i] <- strsplit(pid2016$Outputs[i], "\\[")[[1]][2]
-  pid2016$Outputs[i] <- trimws(strsplit(pid2016$Outputs[i], "\\]")[[1]][2])
-}
-# pid2016$Outputs <- gsub("0.4m diameter", "", pid2016$Outputs)
-# pid2016$Outputs <- gsub("0.6m diameter", "", pid2016$Outputs)
-# pid2016$Outputs <- gsub("0.8m diameter", "", pid2016$Outputs)
-# pid2016$Outputs <- gsub("1.0m diameter", "", pid2016$Outputs)
-
-# output.ids <- seq(1, length(unique(pid2016$Outputs)), 1)
-# output.ids <- cbind(output.ids, unique(pid2016$Outputs))
-# pid2016 <- merge(pid2016, output.ids, by.x="Outputs", by.y="V2")
-
-#only keeping necessary pid variables and renaming as necessary
-pid2016 <- pid2016[,c("Reference", "Id", "activity", 
-                      "SubSectorId", "Outputs", "isNew", "plannedstartyear", "plannedstartmonth",
-                      "actualstartyear", "actualstartmonth", "plannedendyear", "plannedendmonth",
-                      "actualendyear", "actualendmonth", "Bidders", "cs.fund", "local.cont",
-                      "village.id")]
-
-names(pid2016) <- c("project.id", "contract.id", "activity.type", "activity.type.num", "activity.desc",
-                    "new.repair", "planned.start.yr", "planned.start.mo",
-                    "actual.start.yr", "actual.start.mo", "planned.end.yr", "planned.end.mo",
-                    "actual.end.yr", "actual.end.mo", "n.bidders", "cs.fund", "local.cont", "vill.id") 
-pid2016$pid_id <- seq(300001, (300000+nrow(pid2016)), 1)
-
-# write.csv(pid2016, "PID/completed_pid/pid_2016.csv", row.names = F)
-
-#not sure this project and contract ids are accurate
-#no activity description, last report, or progress
-#generate bid dummy?
-
-# fun <- function(x) {
-#   length(unique(x))
+# pull output data from NCDDS
+# output_raw <- list()
+# for(i in 1:25) {
+#   for(j in 2013:2017) {
+#     url <- paste0("http://db.ncdd.gov.kh/pid/reports/monitoring/contractsummary.castle?pv=",i,"&year=",j)
+#     html <- readHTMLTable(url)
+#     table <- html$tblRpt
+#     table$year <- j
+#     output_raw <- list.append(output_raw, table)
+#   }
 # }
-# 
-# apply(pid2016, 2, fun)
+# save(output_raw, file = "PID/2016_data/output_2016.Rdata")
 
+# load output data
+load("PID/2016_data/output_2016.Rdata")
 
-#these were the names (in order) of each province from the data I pulled so I kept these as reference
-# names <- c("Banteay Meanchey", "Battambang", "Kampong Cham", "Kampong Chhnang", "Kampong Speu", "Kampong Thom", "Kampot", 
-#   "Kandal", "Koh Kong", "Kratie", "Mondul Kiri", "Phnom Penh", "Preah Vihear", "Prey Veng", "Pursat", "Ratanak Kiri", 
-#   "Siemreap", "Preah Sihanouk", "Stung Treng", "Svay Rieng", "Takeo", "Oddar Meanchey", "Kep", "Pailin", "Tboung Khmum")
+# merge all years/provinces for output data
+output <- do.call(rbind, output_raw)
+# all variables character
+output <- as.data.frame(apply(output, 2, as.character), stringsAsFactors = F)
+# update names
+names(output) <- c("comm_name", "vill_name", "outputs", "quantity", "total_value", "cs_fund", "local_cont",
+                   "depr", "year")
+# remove commas and Rs from the funding variables
+output$quantity <- gsub(",|R", "", output$quantity)
+output$total_value <- gsub(",|R", "", output$total_value)
+output$cs_fund <- gsub(",|R", "", output$cs_fund)
 
-#save(x, file = "~/Box Sync/cambodia_eba_gie/PID/pid_excel_2016/pid_2016_r_list.RData")
-# for(i in 1:100) {
-#   assign(names(data)[i], data[[i]])
-#   
-#   write.csv(assign(names(data)[i], data[[i]]), paste("2016pid", names(data)[i], ".csv"), row.names = F)
-# }
+# new empty variables
+output[c("contract_id", "activity", "comm_num")]<- NA
+
+for(i in 1:nrow(output)) {
+  if(output$comm_name[i]=="") {
+    
+    ref <- which(output$comm_name!="")
+    ref2 <- ref[which.min(1/(ref-i))]
+    
+    ref3 <- min(i-1+which(output$comm_name[i:nrow(output)]!=""))
+    rows <- ref3-ref2-1
+    
+    output$total_value[i] <- as.numeric(output$quantity[ref2])/rows
+    output$cs_fund[i] <- as.numeric(output$total_value[ref2])/rows
+    output$local_cont[i] <- as.numeric(output$cs_fund[ref2])/rows
+    
+    output$contract_id[i] <- output$vill_name[ref2]
+    output$activity[i] <- output$outputs[ref2]
+    
+    output$comm_num[i] <- unlist(strsplit(output$comm_name[ref2], ","))[1]
+  }
+}
+output <- output[output$comm_name=="",]
+
+output$new_repair <- sapply(output$outputs, function(x) {unlist(strsplit(x, "\\]"))[1]})
+output$contract_id <- as.numeric(gsub("/|-", "", output$contract_id))
+
+output$mergevar <- paste(output$contract_id, output$vill_name, output$quantity)
+output <- output[!(output$mergevar %in% output$mergevar[duplicated(output$mergevar)]),]
+
+contract_output$mergevar <- paste(contract_output$contract_id, contract_output$vill_name, contract_output$quantity)
+contract_output <- contract_output[!(contract_output$mergevar %in% contract_output$mergevar[duplicated(contract_output$mergevar)]),]
+
+contract_output <- merge(contract_output, output, by="mergevar")
+
+contract_output$end_month_actual <- month(as.Date(contract_output$end_actual, format = "%d-%b-%Y"))
+contract_output$end_year_actual <- year(as.Date(contract_output$end_actual, format = "%d-%b-%Y"))
+contract_output$end_month_planned <- month(as.Date(contract_output$end_planned, format = "%d-%b-%Y"))
+contract_output$end_year_planned <- year(as.Date(contract_output$end_planned, format = "%d-%b-%Y"))
+contract_output$start_month_actual <- month(as.Date(contract_output$start_actual, format = "%d-%b-%Y"))
+contract_output$start_year_actual <- year(as.Date(contract_output$start_actual, format = "%d-%b-%Y"))
+contract_output$start_month_planned <- month(as.Date(contract_output$start_planned, format = "%d-%b-%Y"))
+contract_output$start_year_planned <- year(as.Date(contract_output$start_planned, format = "%d-%b-%Y"))
+
+###
+
+projects <- read_excel("pid/PID2019-2016-new.xlsx", sheet = 2)
+contracts <- read_excel("pid/PID2019-2016-new.xlsx", sheet = 1)
+
+contracts_dates <- read_excel("PID/PID2019-2016-new.xlsx", sheet = 1, col_types = "date")
+contracts[c("PlannedStartOn", "ActualWorkStartOn",
+            "PlannedCompletionOn", "ActualWorkCompletionOn")] <- contracts_dates[c("PlannedStartOn", "ActualWorkStartOn",
+                                                                                   "PlannedCompletionOn", "ActualWorkCompletionOn")]
+
+pre_pid <- merge(projects, contracts, by.x = "Id", by.y = "Reference")
+
+pre_pid$end_month_actual <- month(as.Date(pre_pid$ActualWorkCompletionOn, format = "%Y-%m-%d"))
+pre_pid$end_year_actual <- year(as.Date(pre_pid$ActualWorkCompletionOn, format = "%Y-%m-%d"))
+pre_pid$end_month_planned <- month(as.Date(pre_pid$PlannedCompletionOn, format = "%Y-%m-%d"))
+pre_pid$end_year_planned <- year(as.Date(pre_pid$PlannedCompletionOn, format = "%Y-%m-%d"))
+pre_pid$start_month_actual <- month(as.Date(pre_pid$ActualWorkStartOn, format = "%Y-%m-%d"))
+pre_pid$start_year_actual <- year(as.Date(pre_pid$ActualWorkStartOn, format = "%Y-%m-%d"))
+pre_pid$start_month_planned <- month(as.Date(pre_pid$PlannedStartOn, format = "%Y-%m-%d"))
+pre_pid$start_year_planned <- year(as.Date(pre_pid$PlannedStartOn, format = "%Y-%m-%d"))
+
+pre_pid$mergevar <- paste(pre_pid$AreaCode.x, pre_pid$end_month_planned, pre_pid$end_year_planned, pre_pid$start_month_planned, pre_pid$start_year_planned)
+
+contract_output$mergevar <- paste(contract_output$comm_num, contract_output$end_month_planned, contract_output$end_year_planned, 
+                                  contract_output$start_month_planned, contract_output$start_year_planned)
+contract_output$matchid <- seq(1, nrow(contract_output), 1)
+
+pid <- merge(pre_pid, contract_output, by="mergevar")
+names(pid)[which(names(pid)=="Id.y")][1] <- "comm_num2"
+pid <- pid[pid$status=="100 %",]
+
+pid$total_value <- as.numeric(pid$total_value)
+pid$cs_fund <- as.numeric(pid$cs_fund)
+pid$local_cont <- as.numeric(pid$local_cont)
+for(i in 1:nrow(pid)) {
+  pid$total_value[i] <- pid$total_value[i]/sum(pid$matchid==pid$matchid[i])
+  pid$cs_fund[i] <- pid$cs_fund[i]/sum(pid$matchid==pid$matchid[i])
+  pid$local_cont[i] <- pid$local_cont[i]/sum(pid$matchid==pid$matchid[i])
+}
+
+pid$tempvar <- paste(pid$Id.x, pid$Id.y)
+pid2 <- pid[!duplicated(pid$tempvar),]
+
+pid$n_bidders <- ifelse(grepl("\\)", pid$n_bidders),
+                        gsub('[\\(\\)]| |"', "", regmatches(pid$n_bidders, gregexpr("\\(.*?\\)", pid$n_bidders))),
+                        pid$n_bidders)
+
+for(i in unique(pid2$tempvar)) {
+  pid2$quantity[pid2$tempvar==i] <- paste(pid$quantity.x[pid$tempvar==i], collapse = "|")
+  pid2$new_repair[pid2$tempvar==i] <- paste(pid$new_repair[pid$tempvar==i], collapse = "|")
+  pid2$n_bidders[pid2$tempvar==i] <- paste(pid$n_bidders[pid2$tempvar==i], collapse = "|")
+}
+
+pid2 <- pid2[,c("Id.x", "contract_id.x", "activity", "NameEn", "new_repair", "start_year_planned.x", 
+                "start_month_planned.x", "end_year_planned.x", "end_month_planned.x", "start_year_actual.x", 
+                "start_month_actual.x", "end_year_actual.x", "end_month_actual.x", "last_report", "status", 
+                "n_bidders", "cs_fund", "local_cont", "Id.y")]
+
+names(pid2) <- c("project_id", "contract_id", "activity_type", "activity_desc", "new_repair", "start_year_planned",
+                 "start_month_planned", "end_year_planned", "end_month_planned", "start_year_actual", 
+                 "start_month_actual", "end_year_actual", "end_month_actual", "last_report", "status", "n_bidders",
+                 "cs_fund", "local_cont", "vill_id")
+
+pid2$pid_id <- seq(300001, (300000+nrow(pid2)), 1)
+
+write.csv(pid2, "/Users/christianbaehr/Downloads/temp_pid_2016.csv",row.names=F)
+
 

@@ -38,8 +38,10 @@ for(i in unique(progress$ContractID)) {
 ## Identifying Project ID associated with Contract
 contract.output <- read_excel("pid/pid_excel_2008/ContractOutput.xlsx")
 #remove duplicate observations from the contract.output dataset to identify project id for each contract
-contract.output <- contract.output[!duplicated(contract.output$ContractID),c("ContractID", "linkProjectID")]
+#contract.output <- contract.output[!duplicated(contract.output$ContractID),c("ContractID", "linkProjectID")]
+
 #merge "linkProjectID" into main contract dataset
+
 contract <- merge(contract, contract.output, by="ContractID")
 
 ## Adding changed/updated contract end dates from "amendment" file
@@ -72,28 +74,21 @@ contract <- merge(contract, amendment, by="ContractID", all.x = T)
 output <- read_excel("pid/pid_excel_2008/Output.xlsx")
 #identify specific activities for contracts using Output ID
 project.output <- read_excel("pid/pid_excel_2008/ProjectOutput.xlsx")
-sum(output$OutputID %in% project.output$OutputID)
 #merge sector info into project.output
-project.output <- merge(project.output, output, by.x="OutputID", by.y="OutputID")
+project.output <- merge(project.output, output, by.x="OutputID", by.y="OutputID", all.x = T)
 
 #identify and merge in output type info (e.g. new, repair) 
 output.type <- read_excel("pid/pid_excel_2008/OutputType.xlsx")
-sum(project.output$isNew %in% output.type$OPTypeID)
-project.output <- merge(project.output, output.type, by.x="isNew", by.y="OPTypeID")
-
-length(unique(paste(project.output$OutputID, project.output$ProjectID)))
+project.output <- merge(project.output, output.type, by.x="isNew", by.y="OPTypeID", all.x = T)
 
 #identify project + order number activities, merge into project.output
 table3 <- read_excel("pid/pid_excel_2008/Table3.xlsx")
 table3 <- table3[!duplicated(table3$OutputID),]
-sum(project.output$OutputID %in% table3$OutputID)
-project.output <- merge(project.output, table3, by.x="OutputID", by.y="OutputID")
+project.output <- merge(project.output, table3, by.x="OutputID", by.y="OutputID", all.x = T)
 
 #identify sub-sector for each project + order number
 output.categories <- read_excel("pid/pid_excel_2008/OutputCategories.xlsx")
-sum(project.output$CategoryID %in% output.categories$ID)
-project.output <- merge(project.output, output.categories, by.x="CategoryID", by.y="ID")
-
+project.output <- merge(project.output, output.categories, by.x="CategoryID", by.y="ID", all.x = T)
 
 ## Merging project output dataset (multiple rows per project) with the project dataset (one row per project, project-level data)
 
@@ -101,14 +96,11 @@ project.output <- merge(project.output, output.categories, by.x="CategoryID", by
 #Project dataset only has one row per project
 project <- read_excel("pid/pid_excel_2008/Project.xlsx")
 proj.type <- read_excel("pid/pid_excel_2008/ProjType.xlsx")
-sum(project$ProjTypeID %in% proj.type$ProjTypeID)
 #merge in ProjTypeID classification, which gives overall project sector
-project <- merge(project, proj.type, by.x="ProjTypeID", by.y="ProjTypeID")
-
-rm(list=setdiff(ls(), c("contract", "project", "project.output")))
+project <- merge(project, proj.type, by.x="ProjTypeID", by.y="ProjTypeID", all.x = T)
 
 #merge project output (multiple rows per project) with project information, which will repeat over duplicate projects
-project <- merge(project, project.output, by.x="ProjectID", by.y="ProjectID")
+project <- merge(project, project.output, by.x="ProjectID", by.y="ProjectID", all.x = T)
 
 #changing the classes of date variables to character
 x <- unlist(lapply(project, class))
@@ -122,109 +114,40 @@ project[,x[!(x=="POSIXt")]=="POSIXct"] <- lapply(project[,x[!(x=="POSIXt")]=="PO
 # Want to end up with unique project/contract/order identifier
 
 #creating skeleton dataset to merge project and contract data
-proj.cont <- cbind(project[0,], contract[0,])
-proj.cont <- proj.cont[,!(names(proj.cont)=="linkProjectID")]
+# proj.cont <- cbind(project[0,], contract[0,])
+# proj.cont <- proj.cont[,!(names(proj.cont)=="linkProjectID")]
 
-#merging contract and project data
-for(i in unique(contract$linkProjectID)) {
-  #subsetting the project/contract datasets to only the observations with Project ID equal to i
-  temp.contract <- contract[contract$linkProjectID==i,]
-  temp.project <- project[project$ProjectID==i,]
-  
-  if(nrow(temp.project)!=0) {
-    #dividing the CS fund and local contribution columns by the number of rows in the temporary project dataset so when the datasets are
-    #merged, these contribution numbers arent double counted
-    temp.contract[,c("FundCS", "FundLocalContr", "linkProjectID")] <- as.data.frame(matrix(c(temp.contract$FundCS/(nrow(temp.project)*nrow(temp.contract)),
-                                                                                             temp.contract$FundLocalContr/(nrow(temp.project)*nrow(temp.contract)),
-                                                                                             temp.contract$linkProjectID), ncol = 3))
+project$mergevar <- paste(project$ProjectID, project$OrderNo)
+contract$mergevar <- paste(contract$linkProjectID, contract$linkOrderNo)
+# View(contract[contract$mergevar==contract$mergevar[duplicated(contract$mergevar)][1],])
+
+pid2008 <- merge(project, contract, by="mergevar")
+pid2008$commvar <- paste(pid2008$ProjectID, pid2008$VillGis)
+pid20082 <- pid2008
+pid2008 <- pid2008[!duplicated(pid2008$commvar),]
+
+pid2008$actual_start_month <- month(pid2008$StartDate)
+pid2008$actual_start_year <- year(pid2008$StartDate)
+pid2008$actual_end_month <- month(pid2008$EndDate)
+pid2008$actual_end_year <- year(pid2008$EndDate)
+
+for(i in 1:nrow(pid2008)) {
+  if(sum(pid20082$commvar==pid2008$commvar[i])>1) {
+    temp <- pid20082[pid20082$commvar==pid2008$commvar[i],]
     
-    
-    # as.data.frame(matrix(rep(c(sum(temp.contract$FundCS)/nrow(temp.project),
-    #                        sum(temp.contract$FundLocalContr)/nrow(temp.project),
-    #                        temp.contract$linkProjectID), ), ncol = 3))
-    # 
-    
-    
-    
-    
-    
-    
-    #merging subsetted project and contract data
-    temp.project2 <- cbind(temp.project[!duplicated(temp.project$VillGis),], temp.contract[1,][,!names(temp.contract)=="linkProjectID"])
-    
-    for(j in unique(temp.project2$VillGis)) {
-      temp.project2$FundCS[temp.project2$VillGis==j] <- sum(temp.contract$FundCS)*(nrow(temp.project[temp.project$VillGis==j,]))
-      temp.project2$FundLocalContr[temp.project2$VillGis==j] <- sum(temp.contract$FundLocalContr)*(nrow(temp.project[temp.project$VillGis==j,]))
-    }
-    
-    #including subsetted project and contract data in the skeleton dataset created above the loop
-    x <- (nrow(proj.cont)+1):(nrow(proj.cont)+nrow(temp.project2))
-    proj.cont[x,] <- temp.project2
-    proj.cont$Bidders[x] <- mean(temp.contract$Bidders, na.rm = T)
-    proj.cont$bid_dummy[x] <- mean(ifelse(temp.contract$Bidders>1, 1, 0), na.rm = T)
-    proj.cont$one_bid_dummy[x] <- mean(ifelse(temp.contract$Bidders==1, 1, 0), na.rm = T)
-    proj.cont$FundCS[x] <- mean(temp.contract$FundCS, na.rm = T)
-    proj.cont$FundLocalContr[x] <- mean(temp.contract$FundLocalContr, na.rm = T)
+    pid2008$FundCS[i] <- paste(temp$FundCS, collapse = "|")
+    pid2008$FundLocalContr[i] <- paste(temp$FundLocalContr, collapse = "|")
   }
 }
 
-## Clean Up Data for later analysis
+pid2008 <- pid2008[,c("ProjectID", "ContractID", "NameE.y.x", "NameE.x.x", "NameE.y.y", "actual_start_year",
+                      "actual_start_month", "actual_end_year", "actual_end_month", "last.report", "progress", "Bidders",
+                      "FundCS", "FundLocalContr", "VillGis")]
 
-proj.cont$EndDate[!(is.na(proj.cont$New_End_Date))] <- proj.cont$New_End_Date[!(is.na(proj.cont$New_End_Date))]
+names(pid2008) <- c("project_id", "contract_id", "activity_type", "activity_desc", "new_repair", "start_year_actual",
+                    "start_month_actual", "end_year_actual", "end_month_actual", "last_report", "status",
+                    "n_bidders", "cs_fund", "local_cont", "vill_id")
 
-#splitting up the data data into separate month and year columns
-proj.cont$plannedstartyear <- matrix(unlist(str_split(as.character(proj.cont$StartDate), "-")), ncol = 3, byrow = T)[,1]
-proj.cont$plannedstartmonth <- matrix(unlist(str_split(as.character(proj.cont$StartDate), "-")), ncol = 3, byrow = T)[,2]
-
-proj.cont$plannedendyear <- matrix(unlist(str_split(as.character(proj.cont$EndDate), "-")), ncol = 3, byrow = T)[,1]
-proj.cont$plannedendmonth <- matrix(unlist(str_split(as.character(proj.cont$EndDate), "-")), ncol = 3, byrow = T)[,2]
-proj.cont$actualendyear[!is.na(proj.cont$CompletionDate)] <- 
-  matrix(unlist(str_split(as.character(proj.cont$CompletionDate[!is.na(proj.cont$CompletionDate)]), "-")), ncol = 3, byrow = T)[,1]
-proj.cont$actualendmonth[!is.na(proj.cont$CompletionDate)] <- 
-  matrix(unlist(str_split(as.character(proj.cont$CompletionDate[!is.na(proj.cont$CompletionDate)]), "-")), ncol = 3, byrow = T)[,2]
-
-# cont.abandon <- read_excel("~/box sync/cambodia_eba_gie/pid/pid_excel_2008/tblcontract_abandon.xlsx")
-# proj.cont <- merge(proj.cont, cont.abandon, by.x = "ContractID", by.y = "ContractID", all.x = T)
-
-# sum(is.na(proj.cont$actualendyear))
-# sum(is.na(proj.cont$FY))
-# sum(is.na(proj.cont$actualendyear) & proj.cont$progress=="100" & !is.na(proj.cont$last.report)) #####add this
-
-#for rows with missing actual completion dates, proxying with the last report date if the last report progress was equal to 100
-for(i in 1:nrow(proj.cont)) {
-  if(!is.na(proj.cont$progress[i])) {
-    if(is.na(proj.cont$actualendyear[i]) & proj.cont$progress[i]=="100") {
-      proj.cont$actualendyear[i] <- proj.cont$last.report[i]
-      proj.cont$actualendyear[i] <- unlist(strsplit(proj.cont$actualendyear[i], "-"))[1]
-    }
-  }
-}
-
-sum(is.na(proj.cont$actualendyear))
-#View(proj.cont[,c("ContractID", "actualendyear", "progress", "last.report", "actualendyearnew")])
-
-# missing.ends <- proj.cont[is.na(proj.cont$actualendyear),]
-# length(unique(missing.ends$ContractID))
-# length(unique(missing.ends$ProjectID))
-# missing.ends2 <- as.data.frame(missing.ends[0,])
-# for(i in unique(missing.ends$ContractID)) {
-#   temp <- missing.ends[missing.ends$ContractID==i,]
-#   missing.ends2[i,] <- temp[which.max(as.numeric(temp$progress))[1],]
-#   
-# }
-
-#only keeping necessary columns and renaming as necessary
-# each row is a unique project + contract + village combination
-#note: can be multiple contracts per project and multiple villages per contract
-proj.cont <- proj.cont[,c("ProjectID", "ContractID", "NameE.y.x", "ProjTypeID", "Name",
-                          "isNew", "NameE.y.y", "plannedstartyear", "plannedstartmonth",
-                          "plannedendyear", "plannedendmonth", "actualendyear", "actualendmonth",
-                          "last.report", "progress", "Bidders", "bid_dummy", "one_bid_dummy", 
-                          "FundCS", "FundLocalContr", "VillGis")] #no subsector, need competitive bidding dummy
-names(proj.cont) <- c("project.id", "contract.id", "activity.type",  "activity.type.num",
-                      "activity.desc", "new.repair.num", "new.repair", "planned.start.yr", "planned.start.mo",
-                      "planned.end.yr", "planned.end.mo", "actual.end.yr", "actual.end.mo", "last.report",
-                      "status", "n.bidders", "bid.dummy", "one_bid_dummy", "cs.fund", "local.cont", "vill.id")
-proj.cont$pid_id <- seq(100001, (100000+nrow(proj.cont)), 1)
+pid2008$pid_id <- seq(100001, (100000+nrow(pid2008)), 1)
 
 # write.csv(proj.cont, "pid/completed_pid/pid_2008.csv", row.names = F)
