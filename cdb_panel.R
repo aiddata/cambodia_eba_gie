@@ -17,9 +17,9 @@ names(shape) <- c("village.code", "village.name", "province.name", "district.nam
 pid <- read.csv("ProcessedData/pid.csv", stringsAsFactors = F)
 
 # creating a skeleton dataset to store treatment data
-treatment <- as.data.frame(matrix(NA, nrow = 1, ncol = 24))[0,]
+treatment <- as.data.frame(matrix(NA, nrow = 1, ncol = 23))[0,]
 names(treatment) <- c("village.code", "village.name", "province.name", "district.name", "commune.name", "earliest.end.date", 
-                      "enddate.type", "earliest.sector.num", "earliest.sector", paste0("count", 2003:2017))
+                      "enddate.type", "earliest.sector", paste0("count", 2003:2017))
 
 # filling treatment dataset with necessary variables
 for(i in 1:length(unique(pid$village.code))) {
@@ -29,14 +29,13 @@ for(i in 1:length(unique(pid$village.code))) {
   # the treatment data stores the village ID, province the village is in, and the end year and activity type information
   # for the observation with the earliest end year
   treatment[row, c("village.code", "village.name", "province.name", "district.name", "commune.name", "earliest.end.date", 
-                   "enddate.type", "earliest.sector.num", "earliest.sector")] <- c(temp$village.code[1],
+                   "enddate.type", "earliest.sector")] <- c(temp$village.code[1],
                                                                                    temp$village.name[1],
                                                                                    temp$province.name[1],
                                                                                    temp$district.name[1],
                                                                                    temp$commune.name[1],
                                                                                    temp$actual.end.yr[which.min(temp$actual.end.yr)],
                                                                                    temp$enddate.type[which.min(temp$actual.end.yr)],
-                                                                                   temp$activity.type.num[which.min(temp$actual.end.yr)],
                                                                                    temp$activity.type[which.min(temp$actual.end.yr)])
   # storing the count of villages getting treated in each year in the treatment data
   for(j in sort(unique(pid$actual.end.yr))) {

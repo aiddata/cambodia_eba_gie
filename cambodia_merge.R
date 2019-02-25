@@ -61,7 +61,8 @@ pid <- pid[!is.na(pid$actual.end.yr),]
 
 # removing major outliers in the bidding variable
 nrow(pid[(pid$n.bidders %in% c(2003, 3140)),])
-pid <- pid[!(pid$n.bidders %in% c(2003, 3140)),] #May want to keep the rows with high n bidders
+pid <- pid[!grepl("2003|3140", pid$n.bidders),]
+# pid <- pid[!(pid$n.bidders %in% c(2003, 3140)),] #May want to keep the rows with high n bidders
 
 sum(pid$cs.fund>2e+8, na.rm = T)
 sum(pid$cs.fund>1e+8, na.rm = T)
@@ -80,7 +81,6 @@ for(i in 2003:2017) {
   pid[paste0("pct_compet_bids", i)] <- ifelse(pid$actual.end.yr==i, pid$pct_comp_bid, NA)
   pid[paste0("n_bids_", i)] <- ifelse(pid$actual.end.yr==i, pid$n.bidders, NA)
 }
-
 
 stargazer(pid[,c(sort(grep(paste(2003:2017, collapse="|"), names(pid), value = T)))], type="html",
           omit.summary.stat = c("max", "min", "p25", "p75", "sd"), 
@@ -177,9 +177,10 @@ stargazer(pid[,c(sort(grep(paste(2003:2017, collapse="|"), names(pid), value = T
 ###################
 
 # creating a skeleton dataset to store treatment data
-treatment <- as.data.frame(matrix(NA, nrow = 1, ncol = 23))[0,]
+treatment <- as.data.frame(matrix(NA, nrow = 1, ncol = 53))[0,]
 names(treatment) <- c("village.code", "village.name", "province.name", "district.name", "commune.name", "earliest.end.date", 
-                      "enddate.type", "earliest.sector", paste0("count", 2003:2017))
+                      "enddate.type", "earliest.sector", paste0("count", 2003:2017), paste0("n_bids", 2003:2017),
+                      paste0("pct_comp_bids", 2003:2017))
 
 # filling treatment dataset with necessary variables
 for(i in 1:length(unique(pid$village.code))) {
@@ -201,6 +202,8 @@ for(i in 1:length(unique(pid$village.code))) {
   # storing the count of villages getting treated in each year in the treatment data
   for(j in sort(unique(pid$actual.end.yr))) {
     treatment[row, grep(paste0("count", j), names(treatment))] <- nrow(temp[temp$actual.end.yr==j,])
+    treatment[row, grep(paste0("n_bids", j), names(treatment))] <- paste(temp$n.bidders[temp$actual.end.yr==j],collapse="|")
+    treatment[row, grep(paste0("pct_comp_bids", j), names(treatment))] <- paste(temp$pct_comp_bid[temp$actual.end.yr==j],collapse = "|")
   }
 }
 
@@ -292,7 +295,8 @@ for(i in 1:nrow(grid_1000_matched_data)) {
 #                                                            paste0("count", 1992:2017)), paste, sep=".")), names(grid_1000_matched_data))
 pre.panel.names <- c("village.code", "village.name", "province.name", "district.name", "commune.name", "cell_id", 
                      as.vector(outer(c("box", "point"), c("earliest.end.date", "enddate.type", "earliest.sector", 
-                                                          paste0("count", 1992:2017)), paste, sep=".")))
+                                                          paste0("count", 1992:2017)), paste, sep=".")),
+                     paste0("n_bids", 1992:2017), paste0("pct_comp_bids", 1992:2017))
 
 pre.panel <- as.data.frame(matrix(NA, nrow = nrow(grid_1000_matched_data), ncol = length(pre.panel.names)))
 names(pre.panel) <- pre.panel.names
@@ -343,6 +347,13 @@ for(i in 1:length(grid_1000_matched_data$cell_id)) {
         sum()
     }
   }
+  for(j in sort(unique(treatment$earliest.end.date))) {
+    
+    x <- as.numeric(paste(id.list[[i]], id.list2[[i]]))
+    pre.panel[i, grep(paste0("n_bids", j), names(pre.panel))] <- mean(as.numeric(as.matrix(treatment[treatment$village.code %in% x, paste0("n_bids", c(2003:2017)[2003:2017<=j])])),na.rm=T)
+    pre.panel[i, grep(paste0("pct_comp_bids", j), names(pre.panel))] <- mean(as.numeric(as.matrix(treatment[treatment$village.code %in% x, paste0("pct_comp_bids", c(2003:2017)[2003:2017<=j])])),na.rm=T)
+  }
+  
   # merging the grid cell data for grid cell i with the pre.panel dataset for grid cell i
   # pre.panel[i, which(names(pre.panel) %in% names(grid_1000_matched_data))] <- grid_1000_matched_data[i,]
   
@@ -370,9 +381,9 @@ pre.panel$unique.commune.name <- paste(pre.panel$province.name, pre.panel$distri
 names(pre.panel) <- gsub("v4composites_calibrated_201709.", "ntl_", names(pre.panel)) %>% gsub(".mean", "", .)
 pre.panel <- pre.panel[!grepl("ndvi", names(pre.panel))]
 
-pre.panel$temp <- paste(pre.panel$village_box_ids, pre.panel$village_point_ids, sep = "|")
-pre.panel$pct_comp_bids <- sapply(pre.panel$temp, FUN = function(x) {mean(pid$pct_comp_bid[which(pid$village.code %in% as.numeric(unlist(strsplit(x, "\\|"))))])})
-pre.panel$n_bidders <- sapply(pre.panel$temp, FUN = function(x) {mean(pid$n.bidders[which(pid$village.code %in% as.numeric(unlist(strsplit(x, "\\|"))))])})
+# pre.panel$temp <- paste(pre.panel$village_box_ids, pre.panel$village_point_ids, sep = "|")
+# pre.panel$pct_comp_bids <- sapply(pre.panel$temp, FUN = function(x) {mean(pid$pct_comp_bid[which(pid$village.code %in% as.numeric(unlist(strsplit(x, "\\|"))))])})
+# pre.panel$n_bidders <- sapply(pre.panel$temp, FUN = function(x) {mean(pid$n.bidders[which(pid$village.code %in% as.numeric(unlist(strsplit(x, "\\|"))))])})
 
 # write.csv(pre.panel, "ProcessedData/pre_panel.csv", row.names=F)
 # pre.panel <- read.csv("ProcessedData/pre_panel.csv", stringsAsFactors = F)
@@ -417,12 +428,14 @@ pre.panel$n_bidders <- sapply(pre.panel$temp, FUN = function(x) {mean(pid$n.bidd
 panel <- reshape(data = pre.panel, direction = "long", varying = list(paste0("ntl_", 1992:2013),
                                                                       #paste0("ndvi_", 1992:2013),
                                                                       paste0("point.count", 1992:2013),
-                                                                      paste0("box.count", 1992:2013)
+                                                                      paste0("box.count", 1992:2013),
                                                                       #, paste0("ntl_", 1992:2013, "_uncalibrated")
-                                                                      ),
+                                                                      paste0("n_bids", 1992:2013),
+                                                                      paste0("pct_comp_bids", 1992:2013)),
                  idvar = "panel_id", sep = "_", timevar = "year")
-panel <- panel[, !(names(panel) %in% c(paste0("point.count", 2014:2017), paste0("box.count", 2014:2017), "dist_to_water.na",
-                                       "dist_to_groads.na", "id", "panel_id"))]
+# panel <- panel[, !(names(panel) %in% c(paste0("point.count", 2014:2017), paste0("box.count", 2014:2017), paste0("n_bids", 2014:2017),
+#                                        paste0("pct_comp_bids", 2014:2017), "dist_to_water.na", 
+#                                        "dist_to_groads.na", "id", "panel_id"))]
 
 names(panel)[names(panel)=="village.code"] <- "village_code"
 names(panel)[names(panel)=="village.name"] <- "village_name"
@@ -439,6 +452,11 @@ names(panel)[names(panel)=="unique.commune.name"] <- "unique_commune_name"
 names(panel)[names(panel)=="ntl_1992"] <- "ntl"
 names(panel)[names(panel)=="point.count1992"] <- "intra_cell_count"
 names(panel)[names(panel)=="box.count1992"] <- "border_cell_count"
+
+names(panel)[names(panel)=="n_bids1992"] <- "n_bids"
+names(panel)[names(panel)=="pct_comp_bids1992"] <- "pct_comp_bids"
+
+
 # names(panel)[names(panel)=="ntl_1992_uncalibrated"] <- "ntl_uncalibrated"
 
 # Create pre-trend for each cell's ntl values from 1992-2002
@@ -467,13 +485,21 @@ panel <- merge(panel, commune_data, by = "comm_code", all.x=T)
 province_data <- read.csv("inputData/governance/province_governance.csv", stringsAsFactors = F)
 panel <- merge(panel, province_data, by.x="province_name", by.y="Province", all.x=T)
 
+panel$village_point_ids[panel$village_point_ids==""] <- NA
+
+panel$n_vill <- apply(panel[,c("village_point_ids", "village_box_ids")], 1, paste, collapse="|")
+panel$vills <- str_count(gsub("NA\\|", "", panel$n_vill), "\\|")+1
+
 panel <- panel[c("village_code", "village_name", "district_name", "commune_name", "province_name", "cell_id", "year", 
                  "ntl", "intra_cell_count", "border_cell_count", "vills", "unique_commune_name", "ntlpre_9202",
                  "comm_type", "n_vill_in_comm", "n_councilors_03", "admin_funds_03", "dev_funds_03", "total_funds_03",
                  "admin_funds_04", "dev_funds_04", "total_funds_04", "n_communes", "pct_commune_priorities_funded_2002",
                  "pct_commune_priorities_funded_2003", "CS_council_pct_women_2002", "CS_council_pct_women_2003",
-                 "pct_new_commChiefs_prev_served_2002", "pct_new_CC_mem_prev_served_2002", "n_ExCom_staff_2003", "n_bidders",
+                 "pct_new_commChiefs_prev_served_2002", "pct_new_CC_mem_prev_served_2002", "n_ExCom_staff_2003", "n_bids",
                  "pct_comp_bids")]
+
+
+
 
 ## Write Panel Data File
 # write.csv(panel, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel.csv", row.names = F)
