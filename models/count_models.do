@@ -548,6 +548,9 @@ destring pct_comp_bids, replace
 replace n_bids = "." if n_bids=="NA"
 destring n_bids, replace
 
+replace unit_cost = "." if unit_cost=="NA"
+destring unit_cost, replace
+
 reghdfe ntl project_count i.year c.year##i.province_number if year >=2003, cluster(commune_number year) absorb(cell_id)
 outreg2 using "Results/governance/bidding_panel.doc", replace noni addtext("Year FEs", Y, ///
 	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count)
@@ -569,6 +572,15 @@ reghdfe ntl c.(trt1 trt2_4 trt5_9 trt10_)##c.n_bids i.year c.year#i.province_num
 outreg2 using "Results/governance/bidding_panel.doc", append noni addtext("Year FEs", Y, ///
 	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(trt1 trt2_4 trt5_9 trt10_ c.trt1#c.n_bids ///
 	c.trt2_4#c.n_bids c.trt5_9#c.n_bids c.trt10_#c.n_bids)
+	
+reghdfe ntl c.project_count##c.unit_cost i.year c.year##i.province_number if year >= 2003, cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/unitCost_panel.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count c.project_count#c.unit_cost)
+
+reghdfe ntl c.(trt1 trt2_4 trt5_9 trt10_)##c.unit_cost i.year c.year#i.province_number if year >= 2003, cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/unitCost_panel.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(trt1 trt2_4 trt5_9 trt10_ c.trt1#c.unit_cost ///
+	c.trt2_4#c.unit_cost c.trt5_9#c.unit_cost c.trt10_#c.unit_cost)
 
 ***
 

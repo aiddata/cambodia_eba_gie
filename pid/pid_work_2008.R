@@ -9,6 +9,7 @@ setwd("~/box sync/cambodia_eba_gie")
 
 library(readxl)
 library(stringr)
+library(data.table)
 
 ###########################
 ## Read in main "contract" file with one entry per contract id (can be multiple contracts per project id)
@@ -117,6 +118,8 @@ project[,x[!(x=="POSIXt")]=="POSIXct"] <- lapply(project[,x[!(x=="POSIXt")]=="PO
 # proj.cont <- cbind(project[0,], contract[0,])
 # proj.cont <- proj.cont[,!(names(proj.cont)=="linkProjectID")]
 
+unit_cost <- aggregate(project$UnitCost, by=list(project$NameE.x.y), FUN=mean)
+
 project$mergevar <- paste(project$ProjectID, project$OrderNo)
 contract$mergevar <- paste(contract$linkProjectID, contract$linkOrderNo)
 # View(contract[contract$mergevar==contract$mergevar[duplicated(contract$mergevar)][1],])
@@ -139,16 +142,24 @@ for(i in 1:nrow(pid2008)) {
     pid2008$FundLocalContr[i] <- mean(temp$FundLocalContr, na.rm = T)
     
     pid2008$Bidders[i] <- paste(temp$Bidders, collapse = "|")
+    
+    pid2008$mean_unitCost[i] <- mean(temp$UnitCost.x)/mean(unit_cost$x[unit_cost$Group.1 %in% temp$NameE.x.y])
+  }
+  
+  else {
+    
+    pid2008$mean_unitCost[i] <- mean(temp$UnitCost.x)/mean(unit_cost$x[unit_cost$Group.1 %in% temp$NameE.x.y])
+    
   }
 }
 
 pid2008 <- pid2008[,c("ProjectID", "ContractID", "NameE.y.x", "NameE.x.x", "NameE.y.y", "actual_start_year",
                       "actual_start_month", "actual_end_year", "actual_end_month", "last.report", "progress", "Bidders",
-                      "FundCS", "FundLocalContr", "VillGis")]
+                      "FundCS", "FundLocalContr", "mean_unitCost",  "VillGis")]
 
 names(pid2008) <- c("project_id", "contract_id", "activity_type", "activity_desc", "new_repair", "start_year_actual",
                     "start_month_actual", "end_year_actual", "end_month_actual", "last_report", "status",
-                    "n_bidders", "cs_fund", "local_cont", "vill_id")
+                    "n_bidders", "cs_fund", "local_cont", "mean_unitCost", "vill_id")
 
 pid2008$pid_id <- seq(100001, (100000+nrow(pid2008)), 1)
 

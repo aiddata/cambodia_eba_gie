@@ -77,14 +77,17 @@ sum(pid$local.cont>1e+7, na.rm = T)
 
 pid$n.bidders <- sapply(pid$n.bidders, FUN = function(x) {mean(as.numeric(unlist(strsplit(x, "\\|"))), na.rm = T)})
 
-for(i in 2003:2017) {
-  pid[paste0("pct_compet_bids", i)] <- ifelse(pid$actual.end.yr==i, pid$pct_comp_bid, NA)
-  pid[paste0("n_bids_", i)] <- ifelse(pid$actual.end.yr==i, pid$n.bidders, NA)
-}
+q <- quantile(pid$mean_unitCost, na.rm=T, probs=seq(0, 1, 0.1))
+pid$unitCost_quantile <- as.character(sapply(pid$mean_unitCost, FUN = function(x) {names(which.min(abs(x-q)))}))
+pid$unitCost_quantile <- sapply(pid$unitCost_quantile, FUN = function(x) {0.01*as.numeric(gsub("%", "", x))})
 
-stargazer(pid[,c(sort(grep(paste(2003:2017, collapse="|"), names(pid), value = T)))], type="html",
-          omit.summary.stat = c("max", "min", "p25", "p75", "sd"), 
-          out = "/Users/christianbaehr/Desktop/sum_stats.html")
+# for(i in 2003:2017) {
+#   pid[paste0("pct_compet_bids", i)] <- ifelse(pid$actual.end.yr==i, pid$pct_comp_bid, NA)
+#   pid[paste0("n_bids_", i)] <- ifelse(pid$actual.end.yr==i, pid$n.bidders, NA)
+# }
+# stargazer(pid[,c(sort(grep(paste(2003:2017, collapse="|"), names(pid), value = T)))], type="html",
+#           omit.summary.stat = c("max", "min", "p25", "p75", "sd"), 
+#           out = "/Users/christianbaehr/Desktop/sum_stats.html")
 
 # write.csv(pid, "ProcessedData/pid.csv", row.names = F)
 # pid <- read.csv("ProcessedData/pid.csv", stringsAsFactors = F)
@@ -177,10 +180,10 @@ stargazer(pid[,c(sort(grep(paste(2003:2017, collapse="|"), names(pid), value = T
 ###################
 
 # creating a skeleton dataset to store treatment data
-treatment <- as.data.frame(matrix(NA, nrow = 1, ncol = 53))[0,]
+treatment <- as.data.frame(matrix(NA, nrow = 1, ncol = 83))[0,]
 names(treatment) <- c("village.code", "village.name", "province.name", "district.name", "commune.name", "earliest.end.date", 
                       "enddate.type", "earliest.sector", paste0("count", 2003:2017), paste0("n_bids", 2003:2017),
-                      paste0("pct_comp_bids", 2003:2017))
+                      paste0("pct_comp_bids", 2003:2017), paste0("unit_cost", 2003:2017), paste0("unitCost_quantile", 2003:2017))
 
 # filling treatment dataset with necessary variables
 for(i in 1:length(unique(pid$village.code))) {
@@ -204,6 +207,9 @@ for(i in 1:length(unique(pid$village.code))) {
     treatment[row, grep(paste0("count", j), names(treatment))] <- nrow(temp[temp$actual.end.yr==j,])
     treatment[row, grep(paste0("n_bids", j), names(treatment))] <- paste(temp$n.bidders[temp$actual.end.yr==j],collapse="|")
     treatment[row, grep(paste0("pct_comp_bids", j), names(treatment))] <- paste(temp$pct_comp_bid[temp$actual.end.yr==j],collapse = "|")
+    treatment[row, grep(paste0("unit_cost", j), names(treatment))] <- mean(temp$mean_unitCost[temp$actual.end.yr==j], na.rm=T)
+    treatment[row, grep(paste0("unitCost_quantile", j), names(treatment))] <- mean(temp$unitCost_quantile[temp$actual.end.yr==j], na.rm=T)
+    
   }
 }
 
@@ -296,7 +302,8 @@ for(i in 1:nrow(grid_1000_matched_data)) {
 pre.panel.names <- c("village.code", "village.name", "province.name", "district.name", "commune.name", "cell_id", 
                      as.vector(outer(c("box", "point"), c("earliest.end.date", "enddate.type", "earliest.sector", 
                                                           paste0("count", 1992:2017)), paste, sep=".")),
-                     paste0("n_bids", 1992:2017), paste0("pct_comp_bids", 1992:2017))
+                     paste0("n_bids", 1992:2017), paste0("pct_comp_bids", 1992:2017), paste0("unit_cost", 1992:2017),
+                     paste0("unitCost_quantile", 1992:2017))
 
 pre.panel <- as.data.frame(matrix(NA, nrow = nrow(grid_1000_matched_data), ncol = length(pre.panel.names)))
 names(pre.panel) <- pre.panel.names
@@ -352,6 +359,9 @@ for(i in 1:length(grid_1000_matched_data$cell_id)) {
     x <- as.numeric(paste(id.list[[i]], id.list2[[i]]))
     pre.panel[i, grep(paste0("n_bids", j), names(pre.panel))] <- mean(as.numeric(as.matrix(treatment[treatment$village.code %in% x, paste0("n_bids", c(2003:2017)[2003:2017<=j])])),na.rm=T)
     pre.panel[i, grep(paste0("pct_comp_bids", j), names(pre.panel))] <- mean(as.numeric(as.matrix(treatment[treatment$village.code %in% x, paste0("pct_comp_bids", c(2003:2017)[2003:2017<=j])])),na.rm=T)
+    pre.panel[i, grep(paste0("unit_cost", j), names(pre.panel))] <- mean(as.numeric(as.matrix(treatment[treatment$village.code %in% x, paste0("unit_cost", c(2003:2017)[2003:2017<=j])])),na.rm=T)
+    pre.panel[i, grep(paste0("unitCost_quantile", j), names(pre.panel))] <- mean(as.numeric(as.matrix(treatment[treatment$village.code %in% x, paste0("unitCost_quantile", c(2003:2017)[2003:2017<=j])])),na.rm=T)
+    
   }
   
   # merging the grid cell data for grid cell i with the pre.panel dataset for grid cell i
@@ -431,7 +441,9 @@ panel <- reshape(data = pre.panel, direction = "long", varying = list(paste0("nt
                                                                       paste0("box.count", 1992:2013),
                                                                       #, paste0("ntl_", 1992:2013, "_uncalibrated")
                                                                       paste0("n_bids", 1992:2013),
-                                                                      paste0("pct_comp_bids", 1992:2013)),
+                                                                      paste0("pct_comp_bids", 1992:2013),
+                                                                      paste0("unit_cost", 1992:2013),
+                                                                      paste0("unit_cost")),
                  idvar = "panel_id", sep = "_", timevar = "year")
 # panel <- panel[, !(names(panel) %in% c(paste0("point.count", 2014:2017), paste0("box.count", 2014:2017), paste0("n_bids", 2014:2017),
 #                                        paste0("pct_comp_bids", 2014:2017), "dist_to_water.na", 
@@ -455,6 +467,8 @@ names(panel)[names(panel)=="box.count1992"] <- "border_cell_count"
 
 names(panel)[names(panel)=="n_bids1992"] <- "n_bids"
 names(panel)[names(panel)=="pct_comp_bids1992"] <- "pct_comp_bids"
+names(panel)[names(panel)=="unit_cost1992"] <- "unit_cost"
+names(panel)[names(panel)=="unitCost_quantile1992"] <- "unitCost_quantile"
 
 
 # names(panel)[names(panel)=="ntl_1992_uncalibrated"] <- "ntl_uncalibrated"
@@ -496,7 +510,7 @@ panel <- panel[c("village_code", "village_name", "district_name", "commune_name"
                  "admin_funds_04", "dev_funds_04", "total_funds_04", "n_communes", "pct_commune_priorities_funded_2002",
                  "pct_commune_priorities_funded_2003", "CS_council_pct_women_2002", "CS_council_pct_women_2003",
                  "pct_new_commChiefs_prev_served_2002", "pct_new_CC_mem_prev_served_2002", "n_ExCom_staff_2003", "n_bids",
-                 "pct_comp_bids")]
+                 "pct_comp_bids", "unit_cost")]
 
 
 

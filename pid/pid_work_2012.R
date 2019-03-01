@@ -112,8 +112,12 @@ contract$matchID <- paste0(contract$Reference, contract$VillageId, contract$Orde
 #only retaining the project and contract observations that do not have duplicated match IDs
 #merging the contract and project data
 project <- merge(project, contract, by.x="matchID", by.y="matchID")
+
+unit_cost <- aggregate(project$UnitCost.x, by=list(project$Name_EN.y.y), FUN=mean)
+
 project$tempvar <- paste(project$Id, project$VillageId.x)
 project2 <- project[!duplicated(project$tempvar),]
+names(project2)[which(names(project2)=="Name_EN.y.y")[2]] <- "Name_EN.y.y.2"
 
 contract$biddummy <- ifelse(contract$Bidders>0, 1, 0)
 contract$one_bid_dummy <- ifelse(contract$Bidders==1, 1, 0)
@@ -134,7 +138,12 @@ for(i in 1:nrow(project2)) {
     
     project2$UnitCost.x[i] <- paste(unique(tempdata$UnitCost.x), collapse = "|")
     project2$Name_EN.y.x[i] <- paste(unique(tempdata$Name_EN.y.x), collapse = "|")
-    project2$Name_EN.y.y[i] <- paste(unique(tempdata$Name_EN.y.y), collapse = "|")
+    project2$Name_EN.y.y.2[i] <- paste(unique(tempdata$Name_EN.y.y.2), collapse = "|")
+    
+    project2$mean_unitCost[i] <- mean(tempdata$UnitCost.x)/mean(unit_cost$x[unit_cost$Group.1 %in% tempdata$Name_EN.y.y])
+  } else {
+    
+    project2$mean_unitCost[i] <- mean(as.numeric(project2$UnitCost.x[i]))/mean(unit_cost$x[unit_cost$Group.1 %in% project2$Name_EN.y.y])
   }
 }
 
@@ -147,16 +156,15 @@ project2$end_month_planned <- month(project2$PlannedCompletionOn)
 project2$end_month_actual <- ifelse(is.na(project2$ActualWorkCompletionOn), month(project2$last.report), month(project2$ActualWorkCompletionOn))
 project2$end_year_actual <- ifelse(is.na(project2$ActualWorkCompletionOn), year(project2$last.report), year(project2$ActualWorkCompletionOn))
 
-names(project2)[which(names(project2)=="Name_EN.y.y")[2]] <- "Name_EN.y.y.2"
 
 project2 <- project2[,c("Id", "ContractId", "Name_EN.y.y.2", "Name_EN.y.y",
                       "Name_EN.y.x", "start_year_actual", "start_month_actual",
                       "end_year_actual", "end_month_actual", "last.report",
-                      "progress", "Bidders", "cs.fund", "local.cont", "VillageId.x")]
+                      "progress", "Bidders", "mean_unitCost", "cs.fund", "local.cont", "VillageId.x")]
 
 names(project2) <- c("project_id", "contract_id", "activity_type", "activity_desc", "new_repair", 
                     "start_year_actual","start_month_actual", "end_year_actual", "end_month_actual", 
-                    "last_report", "status","n_bidders", "cs_fund", "local_cont", "vill_id")
+                    "last_report", "status","n_bidders", "mean_unitCost", "cs_fund", "local_cont", "vill_id")
 
 project2$pid_id <- seq(200001, (200000+nrow(project2)), 1)
 

@@ -28,8 +28,8 @@ pid$pct_comp_bid <- sapply(pid$n_bidders, FUN = function(x) {1-mean(as.numeric(u
 
 names(pid) <- c("project.id", "contract.id", "activity.type", "activity.desc", "new.repair", "actual.start.yr", 
                 "actual.start.mo", "actual.end.yr", "actual.end.mo", "last.report","status", "n.bidders",
-                "cs.fund", "local.cont", "vill.id", "pid_id", "planned.start.yr", "planned.start.mo", 
-                "planned.end.yr", "planned.end.mo", "pct_comp_bid")
+                "cs.fund", "local.cont", "mean_unitCost", "vill.id", "pid_id", "planned.start.yr", 
+                "planned.start.mo", "planned.end.yr", "planned.end.mo", "pct_comp_bid")
 
 # write.csv(pid, "PID/completed_pid/pid_merge.csv", row.names = F)
 
