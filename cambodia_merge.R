@@ -395,6 +395,27 @@ pre.panel <- pre.panel[!grepl("ndvi", names(pre.panel))]
 # pre.panel$pct_comp_bids <- sapply(pre.panel$temp, FUN = function(x) {mean(pid$pct_comp_bid[which(pid$village.code %in% as.numeric(unlist(strsplit(x, "\\|"))))])})
 # pre.panel$n_bidders <- sapply(pre.panel$temp, FUN = function(x) {mean(pid$n.bidders[which(pid$village.code %in% as.numeric(unlist(strsplit(x, "\\|"))))])})
 
+burial <- st_read("inputData/cambodia_CGEO/Burials.shp")
+
+burial_coords <- matrix(unlist(burial$geometry), ncol = 2, byrow = T)
+burial_coords <- SpatialPoints(burial_coords, proj4string = CRS("+proj=utm +zone=48 +datum=WGS84"))
+burial_coords <- spTransform(x = burial_coords, CRSobj = CRS("+proj=longlat +datum=WGS84"))
+
+# burial$coords <- paste(matrix(burial_coords@coords, ncol = 2, byrow = F)[,1],
+#                        matrix(burial_coords@coords, ncol = 2, byrow = F)[,2], sep = ",")
+
+test <- as.data.frame(point.in.poly(x=burial_coords, y=polygons))
+test$mergevar <- paste(test$NAME_1, test$NAME_2, test$NAME_3)
+
+pre.panel$burial_dummy <- ifelse(pre.panel$unique.commune.name %in% test$mergevar, 1, 0)
+pre.panel$n_burials <- NA
+for(i in 1:nrow(pre.panel)) {
+  if(pre.panel$unique.commune.name[i] %in% test$mergevar) {
+    
+    pre.panel$n_burials[i] <- sum(test$mergevar %in% pre.panel$unique.commune.name[i])
+  } else {pre.panel$n_burials[i] <- 0}
+}
+
 # write.csv(pre.panel, "ProcessedData/pre_panel.csv", row.names=F)
 # pre.panel <- read.csv("ProcessedData/pre_panel.csv", stringsAsFactors = F)
 
@@ -443,7 +464,7 @@ panel <- reshape(data = pre.panel, direction = "long", varying = list(paste0("nt
                                                                       paste0("n_bids", 1992:2013),
                                                                       paste0("pct_comp_bids", 1992:2013),
                                                                       paste0("unit_cost", 1992:2013),
-                                                                      paste0("unit_cost")),
+                                                                      paste0("unitCost_quantile", 1992:2013)),
                  idvar = "panel_id", sep = "_", timevar = "year")
 # panel <- panel[, !(names(panel) %in% c(paste0("point.count", 2014:2017), paste0("box.count", 2014:2017), paste0("n_bids", 2014:2017),
 #                                        paste0("pct_comp_bids", 2014:2017), "dist_to_water.na", 
@@ -510,7 +531,7 @@ panel <- panel[c("village_code", "village_name", "district_name", "commune_name"
                  "admin_funds_04", "dev_funds_04", "total_funds_04", "n_communes", "pct_commune_priorities_funded_2002",
                  "pct_commune_priorities_funded_2003", "CS_council_pct_women_2002", "CS_council_pct_women_2003",
                  "pct_new_commChiefs_prev_served_2002", "pct_new_CC_mem_prev_served_2002", "n_ExCom_staff_2003", "n_bids",
-                 "pct_comp_bids", "unit_cost")]
+                 "pct_comp_bids", "unit_cost", "unitCost_quantile", "burial_dummy", "n_burials")]
 
 
 

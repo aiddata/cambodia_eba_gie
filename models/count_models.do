@@ -551,6 +551,9 @@ destring n_bids, replace
 replace unit_cost = "." if unit_cost=="NA"
 destring unit_cost, replace
 
+replace unitcost_quantile = "." if unitcost_quantile=="NA"
+destring unitcost_quantile, replace
+
 reghdfe ntl project_count i.year c.year##i.province_number if year >=2003, cluster(commune_number year) absorb(cell_id)
 outreg2 using "Results/governance/bidding_panel.doc", replace noni addtext("Year FEs", Y, ///
 	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count)
@@ -574,13 +577,35 @@ outreg2 using "Results/governance/bidding_panel.doc", append noni addtext("Year 
 	c.trt2_4#c.n_bids c.trt5_9#c.n_bids c.trt10_#c.n_bids)
 	
 reghdfe ntl c.project_count##c.unit_cost i.year c.year##i.province_number if year >= 2003, cluster(commune_number year) absorb(cell_id)
-outreg2 using "Results/governance/unitCost_panel.doc", append noni addtext("Year FEs", Y, ///
+outreg2 using "Results/governance/unitCost_panel.doc", replace noni addtext("Year FEs", Y, ///
 	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count c.project_count#c.unit_cost)
-
+reghdfe ntl c.project_count##c.unitcost_quantile i.year c.year##i.province_number if year >= 2003, cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/unitCost_panel.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count c.project_count#c.unitcost_quantile)
 reghdfe ntl c.(trt1 trt2_4 trt5_9 trt10_)##c.unit_cost i.year c.year#i.province_number if year >= 2003, cluster(commune_number year) absorb(cell_id)
 outreg2 using "Results/governance/unitCost_panel.doc", append noni addtext("Year FEs", Y, ///
 	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(trt1 trt2_4 trt5_9 trt10_ c.trt1#c.unit_cost ///
 	c.trt2_4#c.unit_cost c.trt5_9#c.unit_cost c.trt10_#c.unit_cost)
+reghdfe ntl c.(trt1 trt2_4 trt5_9 trt10_)##c.unitcost_quantile i.year c.year#i.province_number if year >= 2003, cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/unitCost_panel.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(trt1 trt2_4 trt5_9 trt10_ c.trt1#c.unitcost_quantile ///
+	c.trt2_4#c.unitcost_quantile c.trt5_9#c.unitcost_quantile c.trt10_#c.unitcost_quantile)
+
+reghdfe ntl c.project_count##c.burial_dummy i.year c.year##i.province_number if year >= 2003, cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/burial_panel.doc", replace noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count c.project_count#c.burial_dummy)
+reghdfe ntl c.project_count##c.n_burials i.year c.year##i.province_number if year >= 2003, cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/burial_panel.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(project_count c.project_count#c.n_burials)
+reghdfe ntl c.(trt1 trt2_4 trt5_9 trt10_)##c.burial_dummy i.year c.year#i.province_number if year >= 2003, cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/burial_panel.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(trt1 trt2_4 trt5_9 trt10_ c.trt1#c.burial_dummy ///
+	c.trt2_4#c.burial_dummy c.trt5_9#c.burial_dummy c.trt10_#c.burial_dummy)
+reghdfe ntl c.(trt1 trt2_4 trt5_9 trt10_)##c.n_burials i.year c.year#i.province_number if year >= 2003, cluster(commune_number year) absorb(cell_id)
+outreg2 using "Results/governance/burial_panel.doc", append noni addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y) keep(trt1 trt2_4 trt5_9 trt10_ c.trt1#c.n_burials ///
+	c.trt2_4#c.n_burials c.trt5_9#c.n_burials c.trt10_#c.n_burials)
+
 
 ***
 
