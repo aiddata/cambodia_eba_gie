@@ -14,13 +14,16 @@ library(sf)
 library(stringr)
 library(sp)
 library(spatialEco)
+library(stargazer)
 library(rlist)
 library(rgdal)
+library(geosphere)
 
 # reading in complete PID data
 pid <- read.csv("PID/completed_pid/pid_merge.csv", stringsAsFactors = F)
 
 polygons <- readRDS("inputdata/gadm36_KHM_4_sp.rds")
+
 shape <- as.data.frame(read.csv("inputdata/village_grid_files/village_data.csv", stringsAsFactors = F))
 spatial.data <- SpatialPointsDataFrame(coords = shape[,c("longitude", "latitude")], data = shape, 
                                        proj4string = CRS("+proj=longlat +datum=WGS84"))
@@ -355,13 +358,13 @@ for(i in 1:length(grid_1000_matched_data$cell_id)) {
     }
   }
   for(j in sort(unique(treatment$earliest.end.date))) {
-    
+
     x <- as.numeric(paste(id.list[[i]], id.list2[[i]]))
     pre.panel[i, grep(paste0("n_bids", j), names(pre.panel))] <- mean(as.numeric(as.matrix(treatment[treatment$village.code %in% x, paste0("n_bids", c(2003:2017)[2003:2017<=j])])),na.rm=T)
     pre.panel[i, grep(paste0("pct_comp_bids", j), names(pre.panel))] <- mean(as.numeric(as.matrix(treatment[treatment$village.code %in% x, paste0("pct_comp_bids", c(2003:2017)[2003:2017<=j])])),na.rm=T)
     pre.panel[i, grep(paste0("unit_cost", j), names(pre.panel))] <- mean(as.numeric(as.matrix(treatment[treatment$village.code %in% x, paste0("unit_cost", c(2003:2017)[2003:2017<=j])])),na.rm=T)
     pre.panel[i, grep(paste0("unitCost_quantile", j), names(pre.panel))] <- mean(as.numeric(as.matrix(treatment[treatment$village.code %in% x, paste0("unitCost_quantile", c(2003:2017)[2003:2017<=j])])),na.rm=T)
-    
+
   }
   
   # merging the grid cell data for grid cell i with the pre.panel dataset for grid cell i
@@ -385,7 +388,20 @@ pre.panel <- merge(pre.panel, grid_1000_matched_data, by="cell_id")
 
 for(i in grep("count", names(pre.panel))) {pre.panel[which(is.na(pre.panel[,i])), i] <- 0}
 
+grid_poly <- st_read("inputData/village_grid_files/grid_1000_filter_lite.geojson")
+grid_poly <- merge(grid_1000_matched_data, grid_poly, by="cell_id")
+grid_poly$lon <- sapply(grid_poly$geometry, FUN = function(x) centroid(matrix(unlist(x), ncol = 2))[,1])
+grid_poly$lat <- sapply(grid_poly$geometry, FUN = function(x) centroid(matrix(unlist(x), ncol = 2))[,2])
+grid_poly$midpoint <- SpatialPoints(coords = grid_poly[c("lon", "lat")], proj4string = CRS("+proj=longlat +datum=WGS84"))
+
+grid_names <- as.data.frame(cbind(grid_poly, as.data.frame(point.in.poly(x=grid_poly$midpoint, y=polygons))))
+grid_names <- grid_names[c("cell_id", "NAME_1", "NAME_2", "NAME_3")]
+names(grid_names) <- c("cell_id", "prov_name", "dist_name", "comm_name")
+
+pre.panel <- merge(pre.panel, grid_names, by = "cell_id")
+
 pre.panel$unique.commune.name <- paste(pre.panel$province.name, pre.panel$district.name, pre.panel$commune.name)
+pre.panel$unique.commune.name2 <- paste(pre.panel$prov_name, pre.panel$dist_name, pre.panel$comm_name)
 
 # editing variable names to make data reshaping easier
 names(pre.panel) <- gsub("v4composites_calibrated_201709.", "ntl_", names(pre.panel)) %>% gsub(".mean", "", .)
@@ -396,24 +412,101 @@ pre.panel <- pre.panel[!grepl("ndvi", names(pre.panel))]
 # pre.panel$n_bidders <- sapply(pre.panel$temp, FUN = function(x) {mean(pid$n.bidders[which(pid$village.code %in% as.numeric(unlist(strsplit(x, "\\|"))))])})
 
 burial <- st_read("inputData/cambodia_CGEO/Burials.shp")
-
 burial_coords <- matrix(unlist(burial$geometry), ncol = 2, byrow = T)
 burial_coords <- SpatialPoints(burial_coords, proj4string = CRS("+proj=utm +zone=48 +datum=WGS84"))
 burial_coords <- spTransform(x = burial_coords, CRSobj = CRS("+proj=longlat +datum=WGS84"))
 
+bombing <- st_read("inputData/cambodia_CGEO/Bombing.shp")
+bombing_coords <- matrix(unlist(bombing$geometry), ncol = 2, byrow = T)
+bombing_coords <- SpatialPoints(bombing_coords, proj4string = CRS("+proj=utm +zone=48 +datum=WGS84"))
+bombing_coords <- spTransform(x = bombing_coords, CRSobj = CRS("+proj=longlat +datum=WGS84"))
+
+prison <- st_read("inputData/cambodia_CGEO/Prisons.shp")
+prison_coords <- matrix(unlist(prison$geometry), ncol = 2, byrow = T)
+prison_coords <- SpatialPoints(prison_coords, proj4string = CRS("+proj=utm +zone=48 +datum=WGS84"))
+prison_coords <- spTransform(x = prison_coords, CRSobj = CRS("+proj=longlat +datum=WGS84"))
+
+memorial <- st_read("inputData/cambodia_CGEO/Memorials.shp")
+memorial_coords <- matrix(unlist(memorial$geometry), ncol = 2, byrow = T)
+memorial_coords <- SpatialPoints(memorial_coords, proj4string = CRS("+proj=utm +zone=48 +datum=WGS84"))
+memorial_coords <- spTransform(x = memorial_coords, CRSobj = CRS("+proj=longlat +datum=WGS84"))
+
 # burial$coords <- paste(matrix(burial_coords@coords, ncol = 2, byrow = F)[,1],
 #                        matrix(burial_coords@coords, ncol = 2, byrow = F)[,2], sep = ",")
 
-test <- as.data.frame(point.in.poly(x=burial_coords, y=polygons))
-test$mergevar <- paste(test$NAME_1, test$NAME_2, test$NAME_3)
+burial2 <- as.data.frame(point.in.poly(x=burial_coords, y=polygons))
+burial2$mergevar <- paste(burial2$NAME_1, burial2$NAME_2, burial2$NAME_3)
 
-pre.panel$burial_dummy <- ifelse(pre.panel$unique.commune.name %in% test$mergevar, 1, 0)
+bombing2 <- as.data.frame(point.in.poly(x=bombing_coords, y=polygons))
+bombing2$mergevar <- paste(bombing2$NAME_1, bombing2$NAME_2, bombing2$NAME_3)
+
+prison2 <- as.data.frame(point.in.poly(x=prison_coords, y=polygons))
+prison2$mergevar <- paste(prison2$NAME_1, prison2$NAME_2, prison2$NAME_3)
+
+memorial2 <- as.data.frame(point.in.poly(x=memorial_coords, y=polygons))
+memorial2$mergevar <- paste(memorial2$NAME_1, memorial2$NAME_2, memorial2$NAME_3)
+
+pre.panel$burial_dummy <- ifelse(pre.panel$unique.commune.name2 %in% burial2$mergevar, 1, 0)
+pre.panel$bombing_dummy <- ifelse(pre.panel$unique.commune.name2 %in% bombing2$mergevar, 1, 0)
+pre.panel$prison_dummy <- ifelse(pre.panel$unique.commune.name2 %in% prison2$mergevar, 1, 0)
+pre.panel$memorial_dummy <- ifelse(pre.panel$unique.commune.name2 %in% memorial2$mergevar, 1, 0)
+
 pre.panel$n_burials <- NA
+pre.panel$n_bombings <- NA
+pre.panel$n_prisons <- NA
+pre.panel$n_memorials <- NA
+
 for(i in 1:nrow(pre.panel)) {
-  if(pre.panel$unique.commune.name[i] %in% test$mergevar) {
-    
-    pre.panel$n_burials[i] <- sum(test$mergevar %in% pre.panel$unique.commune.name[i])
-  } else {pre.panel$n_burials[i] <- 0}
+  
+  if(pre.panel$unique.commune.name2[i] %in% burial2$mergevar) {
+    pre.panel$n_burials[i] <- sum(burial2$mergevar %in% pre.panel$unique.commune.name2[i])
+  } else {
+    pre.panel$n_burials[i] <- 0
+  }
+  
+  if(pre.panel$unique.commune.name2[i] %in% bombing2$mergevar) {
+    pre.panel$n_bombings[i] <- sum(bombing2$mergevar %in% pre.panel$unique.commune.name2[i])
+  } else {
+    pre.panel$n_bombings[i] <- 0
+  }
+  
+  if(pre.panel$unique.commune.name2[i] %in% prison2$mergevar) {
+    pre.panel$n_prisons[i] <- sum(prison2$mergevar %in% pre.panel$unique.commune.name2[i])
+  } else {
+    pre.panel$n_prisons[i] <- 0
+  }
+  
+  if(pre.panel$unique.commune.name2[i] %in% memorial2$mergevar) {
+    pre.panel$n_memorials[i] <- sum(memorial2$mergevar %in% pre.panel$unique.commune.name2[i])
+  } else {
+    pre.panel$n_memorials[i] <- 0
+  }
+}
+
+# pre.panel$unitCost_dummy <- NA
+# for(i in 1:nrow(pre.panel)) {
+#   pre.panel$unitCost_top5dummy[i] <- any(pre.panel[i, sort(grep("unit_cost", names(pre.panel), value = T))] > apply(pre.panel[sort(grep("unit_cost", names(pre.panel), value = T))], 2, FUN = function(x) {quantile(x, probs = seq(0, 1, 0.05), na.rm = T)[20]}))
+# }
+
+quants <- apply(pre.panel[sort(grep(paste0("unit_cost" , 1992:2017, collapse = "|"), names(pre.panel), value = T))], 2, 
+                FUN = function(x) {quantile(x, probs = seq(0, 1, 0.05), na.rm = T)[20]})
+
+pre.panel$unitCostDummy <- apply(pre.panel[grep("unit_cost", names(pre.panel), value = T)], 1, FUN = function(x) {any(x>quants)})
+pre.panel$unitCostDummy[is.na(pre.panel$unitCostDummy)] <- F
+
+uc_dummy <- aggregate(pre.panel$unitCostDummy, by=list(pre.panel$unique.commune.name), FUN=mean, na.rm=T)
+names(uc_dummy) <- c("unique.commune.name", "unitCostDummy_comm")
+pre.panel <- merge(pre.panel, uc_dummy, by="unique.commune.name")
+
+commvars <- aggregate(pre.panel[c(grep("n_bids|pct_comp_bids|unit_cost|unitCost_quantile", names(pre.panel), value=T))],
+                      by=list(pre.panel$unique.commune.name), FUN=mean, na.rm=T)
+
+my.names <- as.vector(sapply(c("n_bids", "pct_comp_bids", "unit_cost", "unitCost_quantile"), FUN = function(x) paste0(x, "_comm", 1992:2017)))
+pre.panel[my.names] <- NA
+
+for(i in 1:nrow(pre.panel)) {
+  pre.panel[i, sort(my.names)] <- commvars[commvars$Group.1==pre.panel$unique.commune.name[i], sort(gsub("_comm", "", my.names))]
+  print(i)
 }
 
 # write.csv(pre.panel, "ProcessedData/pre_panel.csv", row.names=F)
@@ -464,7 +557,11 @@ panel <- reshape(data = pre.panel, direction = "long", varying = list(paste0("nt
                                                                       paste0("n_bids", 1992:2013),
                                                                       paste0("pct_comp_bids", 1992:2013),
                                                                       paste0("unit_cost", 1992:2013),
-                                                                      paste0("unitCost_quantile", 1992:2013)),
+                                                                      paste0("unitCost_quantile", 1992:2013),
+                                                                      paste0("n_bids_comm", 1992:2013),
+                                                                      paste0("pct_comp_bids_comm", 1992:2013),
+                                                                      paste0("unit_cost_comm", 1992:2013),
+                                                                      paste0("unitCost_quantile_comm", 1992:2013)),
                  idvar = "panel_id", sep = "_", timevar = "year")
 # panel <- panel[, !(names(panel) %in% c(paste0("point.count", 2014:2017), paste0("box.count", 2014:2017), paste0("n_bids", 2014:2017),
 #                                        paste0("pct_comp_bids", 2014:2017), "dist_to_water.na", 
@@ -490,6 +587,11 @@ names(panel)[names(panel)=="n_bids1992"] <- "n_bids"
 names(panel)[names(panel)=="pct_comp_bids1992"] <- "pct_comp_bids"
 names(panel)[names(panel)=="unit_cost1992"] <- "unit_cost"
 names(panel)[names(panel)=="unitCost_quantile1992"] <- "unitCost_quantile"
+
+names(panel)[names(panel)=="n_bids_comm1992"] <- "n_bids_comm"
+names(panel)[names(panel)=="pct_comp_bids_comm1992"] <- "pct_comp_bids_comm"
+names(panel)[names(panel)=="unit_cost_comm1992"] <- "unit_cost_comm"
+names(panel)[names(panel)=="unitCost_quantile_comm1992"] <- "unitCost_quantile_comm"
 
 
 # names(panel)[names(panel)=="ntl_1992_uncalibrated"] <- "ntl_uncalibrated"
@@ -526,19 +628,71 @@ panel$n_vill <- apply(panel[,c("village_point_ids", "village_box_ids")], 1, past
 panel$vills <- str_count(gsub("NA\\|", "", panel$n_vill), "\\|")+1
 
 panel <- panel[c("village_code", "village_name", "district_name", "commune_name", "province_name", "cell_id", "year", 
-                 "ntl", "intra_cell_count", "border_cell_count", "vills", "unique_commune_name", "ntlpre_9202",
+                 "ntl", "intra_cell_count", "border_cell_count", "vills", "unique_commune_name", "unique.commune.name2","ntlpre_9202",
                  "comm_type", "n_vill_in_comm", "n_councilors_03", "admin_funds_03", "dev_funds_03", "total_funds_03",
                  "admin_funds_04", "dev_funds_04", "total_funds_04", "n_communes", "pct_commune_priorities_funded_2002",
                  "pct_commune_priorities_funded_2003", "CS_council_pct_women_2002", "CS_council_pct_women_2003",
                  "pct_new_commChiefs_prev_served_2002", "pct_new_CC_mem_prev_served_2002", "n_ExCom_staff_2003", "n_bids",
-                 "pct_comp_bids", "unit_cost", "unitCost_quantile", "burial_dummy", "n_burials")]
+                 "pct_comp_bids", "unit_cost", "unitCost_quantile", "burial_dummy", "bombing_dummy", "prison_dummy",
+                 "memorial_dummy", "n_burials", "n_bombings", "n_prisons", "n_memorials", "unitCostDummy",
+                 "n_bids_comm", "pct_comp_bids_comm", "unit_cost_comm", "unitCost_quantile_comm", "unitCostDummy_comm")]
 
+n_bombings <- panel$n_bombings[panel$n_bombings!=9282]
+n_bombings[length(n_bombings):nrow(panel)] <- NA
 
+summary_data <- cbind(panel[c("n_bids", "pct_comp_bids", "unit_cost", "burial_dummy", "bombing_dummy", "prison_dummy", 
+                              "memorial_dummy", "n_burials")],
+                      n_bombings,
+                      panel[c("n_prisons", "n_memorials")])
 
+stargazer(summary_data[c("n_bids", "pct_comp_bids", "unit_cost")],
+          covariate.labels = c("# of Bidders Per Project", "% Projects with Competitive Bids", "Unit Cost Per Project"),
+          omit.summary.stat = c("n", "p25", "p75"), type = "html", out = "Results/bidding_stats.html")
+
+stargazer(summary_data[c("burial_dummy", "bombing_dummy", "prison_dummy", "memorial_dummy", "n_burials",
+                         "n_bombings","n_prisons", "n_memorials")],
+          covariate.labels = c("Burial Sites Present (Dummy)", "Bombing Sites Present (Dummy)", "Prison Sites Present (Dummy)", "Memorial Sites Present (Dummy)",
+                               "# of Burial Sites", "# of Bombing Sites", "# of Prison Sites", "# of Memorial Sites"),
+          omit.summary.stat = c("n", "p25", "p75"), type = "html", out = "Results/cgeo_stats.html")
+
+# stargazer(pid[,c(sort(grep(paste(2003:2017, collapse="|"), names(pid), value = T)))], type="html",
+#           omit.summary.stat = c("max", "min", "p25", "p75", "sd"), 
+#           out = "/Users/christianbaehr/Desktop/sum_stats.html")
 
 ## Write Panel Data File
 # write.csv(panel, file = "/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel.csv", row.names = F)
 # panel <- read.csv("/Users/christianbaehr/Box Sync/cambodia_eba_gie/ProcessedData/panel.csv", stringsAsFactors = F)
+
+stargazer(panel[!panel$n_bombings==9282, c("burial_dummy" ,"bombing_dummy", "prison_dummy", "memorial_dummy",
+                                           "n_burials", "n_bombings", "n_prisons", "n_memorials")],
+          covariate.labels = c("Burial Sites in Commune (Dummy)", "Bombing Sites in Commune (Dummy)",
+                               "Prison Sites in Commune (Dummy)", "Memorial Sites in Commune (Dummy)",
+                               "# of Burials Sites in Commune", "# of Bombing Sites in Commune",
+                               "# of Prison Sites in Commune", "# of Memorial Sites in Commune"),
+          type = "html", omit.summary.stat = c("p25", "p75", "n"), 
+          out = "Report/KR_sumStats.html")
+
+panel$councilors_per_vill <- panel$n_councilors_03/panel$n_vill_in_comm
+
+stargazer(panel[c("councilors_per_vill" ,"pct_new_CC_mem_prev_served_2002", "n_ExCom_staff_2003",
+                  "CS_council_pct_women_2002", "CS_council_pct_women_2003",
+                  "pct_commune_priorities_funded_2002")],
+                covariate.labels = c("Councilors per Village (Commune-Level)", 
+                                     "% Councilors Prev. Unelected, 2002 (Province-Level)",
+                                     "# of ExCom Staff (Province-Level)",
+                                     "% Women in Councils, 2002 (Province-Level)",
+                                     "% Women in Councils, 2003 (Province-Level)",
+                                     "% Commune Priorities Funded, 2002 (Province-Level)"),
+          type = "html", omit.summary.stat = c("p25", "p75", "n"), 
+          out = "Report/Seila_sumStats.html")
+
+stargazer(panel[c("n_bids" ,"pct_comp_bids", "unit_cost", "unitCostDummy")],
+          covariate.labels = c("# of Bids", 
+                               "% Competitive Bids",
+                               "Unit Cost",
+                               "Unit Cost 95+ Percentile Dummy"),
+          type = "html", omit.summary.stat = c("p25", "p75", "n"), 
+          out = "Report/unitCost+bidding_sumStats.html")
 
 # grid_1000_matched_data <- grid_1000_matched_data[,c("cell_id", "village_point_ids", "village_box_ids")]
 
