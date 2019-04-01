@@ -75,7 +75,7 @@ point_list = map(Point, coords)
 point_list_country = filter(prep_feat.contains, point_list)
 
 df_list = [{"longitude": i.x, "latitude": i.y} for i in point_list_country]
-df = pd.Dataframe(df_list)
+df = pd.DataFrame(df_list)
 
 
 df.to_csv(output_path, index=False, encoding='utf-8')
