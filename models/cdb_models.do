@@ -3,7 +3,9 @@
 cd "/Users/christianbaehr/Box Sync/cambodia_eba_gie"
 
 * read in CDB data
-insheet using "ProcessedData/cdb_panel.csv", clear
+* insheet using "ProcessedData/cdb_panel.csv", clear
+insheet using "Report/data-preliminaryReport/cdb_panel.csv", clear
+
 
 * set year variable equal to actual year
 replace year = year + 2007
@@ -372,10 +374,26 @@ outreg2 using "Report/cdb_models.doc", append noni addtext("Year FEs", Y, "Villa
 	ctitle("Household Wealth (PC1)")
 erase "Report/cdb_models.txt"
 
+***
+
+gen trt1 = (treatment_count>=1)
+gen trt2_4 = (treatment_count>=2)
+gen trt5_9 = (treatment_count>=5)
+gen trt10_ = (treatment_count>=10)
+
+reghdfe infant_mort treatment_count i.year, cluster(commune_number year) absorb(village_code)
+outreg2 using "Report/mortality_models.doc", replace noni tex addtext("Year FEs", Y, "Village FEs", Y, "Lin. Time Trends by Prov.", N) keep(treatment_count)
+
+reghdfe infant_mort treatment_count i.province_number#c.year i.year, cluster(commune_number year) absorb(village_code)
+outreg2 using "Report/mortality_models.doc", append noni tex addtext("Year FEs", Y, "Village FEs", Y, "Lin. Time Trends by Prov.", Y) keep(treatment_count)
+
+reghdfe infant_mort trt1 trt2_4 trt5_9 trt10_ i.province_number#c.year i.year, cluster(commune_number year) absorb(village_code)
+outreg2 using "Report/mortality_models.doc", append noni tex addtext("Year FEs", Y, "Village FEs", Y, "Lin. Time Trends by Prov.", Y) ///
+	keep(trt1 trt2_4 trt5_9 trt10_)
 
 
 
 
-
-
+	
+	
 

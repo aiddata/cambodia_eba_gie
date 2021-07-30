@@ -649,3 +649,68 @@ local txtfiles: dir . files "ntl_continuous.doc"
 foreach txt in `txtfiles' {
     erase `"`txt'"'
 }
+
+***
+
+collapse n_councilors_03 n_bombings n_memorials province_number, by(commune_number)
+
+reg n_councilors_03 n_bombings i.province_number
+est sto a1
+outreg2 using "/Users/christianbaehr/Downloads/add_models.doc", replace noni keep(n_bombings)
+reg n_councilors_03 n_memorials i.province_number
+est sto a2
+outreg2 using "/Users/christianbaehr/Downloads/add_models.doc", append noni keep(n_memorials)
+reg n_councilors_03 n_bombings n_memorials i.province_number
+est sto a3
+outreg2 using "/Users/christianbaehr/Downloads/add_models.doc", append noni keep(n_bombings n_memorials)
+
+***
+
+reghdfe ntl c.project_count##c.(councilors_per_vill n_memorials) i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+est sto a1
+outreg2 using "/Users/christianbaehr/Downloads/add_models2.doc", replace noni keep(project_count c.project_count#c.councilors_per_vill c.project_count#c.n_memorials) addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y)
+
+
+reghdfe ntl c.project_count##c.(councilors_per_vill n_bombings) i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+est sto a2
+outreg2 using "/Users/christianbaehr/Downloads/add_models2.doc", append noni keep(project_count c.project_count#c.councilors_per_vill c.project_count#c.n_bombings) addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y)
+	
+reghdfe ntl c.project_count##c.(councilors_per_vill n_bombings n_memorials) i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+est sto a3
+outreg2 using "/Users/christianbaehr/Downloads/add_models2.doc", append noni keep(project_count c.project_count#c.councilors_per_vill c.project_count#c.n_bombings c.project_count#c.n_memorials) addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y)
+	
+
+	
+reghdfe ntl c.project_count##c.(n_councilors_03 n_memorial) i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+est sto a4
+outreg2 using "/Users/christianbaehr/Downloads/add_models2.doc", append noni keep(project_count c.project_count#c.n_councilors_03 c.project_count#c.n_memorials) addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y)
+
+
+reghdfe ntl c.project_count##c.(n_councilors_03 n_bombing) i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+est sto a5
+outreg2 using "/Users/christianbaehr/Downloads/add_models2.doc", append noni keep(project_count c.project_count#c.n_councilors_03 c.project_count#c.n_bombing) addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y)
+
+reghdfe ntl c.project_count##c.(n_councilors_03 n_bombings n_memorials) i.year c.year#i.province_number, ///
+	cluster(commune_number year) absorb(cell_id)
+est sto a6
+outreg2 using "/Users/christianbaehr/Downloads/add_models2.doc", append noni keep(project_count c.project_count#c.n_councilors_03 c.project_count#c.n_bombings c.project_count#c.n_memorials) addtext("Year FEs", Y, ///
+	"Grid cell FEs", Y, "Lin. Time Trends by Prov.", Y)
+
+	
+	
+	
+	
+	
+
+
+

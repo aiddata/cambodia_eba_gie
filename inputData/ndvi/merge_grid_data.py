@@ -30,9 +30,40 @@ grid_cell_coords.to_csv(my_dir + "/grid_cell_coords.csv", index=False)
 
 del grid_cell_coords
 
-pre_panel = pre_panel.drop(['latitude', 'longitude'], axis=1)
+pre_panel = pre_panel.drop(['latitude', 'longitude', 'concessions.na.count', 'ID'], axis=1)
 pre_panel.to_csv(my_dir + "/pre_panel.csv", index=False)
 
 # test_panel = pre_panel.sample(n=100)
 # test_panel.to_csv(path_or_buf = my_dir + "/test_panel.csv", index=False)
+
+###################
+
+pre_panel = pd.read_csv(my_dir + "/pre_panel.csv")
+
+# pre_panel = pre_panel.drop(['ID', 'concessions.na.count'], axis=1)
+
+
+pre_panel = pd.wide_to_long(pre_panel, ['ndvi_', 'trt'], i="cell_id", j="year")
+
+pre_panel.to_csv(my_dir + "/panel.csv")
+pre_panel.to_stata(my_dir + "/panel.dta")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
